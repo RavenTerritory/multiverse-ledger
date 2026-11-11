@@ -666,6 +666,12 @@
            transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease; transform-origin: 0 0; }
   .pcard.main { z-index: 20; }
   .pstackcards:not(.open) .pcard:not(.main) { pointer-events: none; }
+  /* opened, the pictures come four at a time; the other pages wait off to the sides */
+  .pstackcards.open { overflow-x: clip; }
+  .pstackcards.open .pcard.offpg { pointer-events: none; }
+  .pspager { display: none; align-items: center; justify-content: center; gap: 10px; margin: 2px 0 10px; }
+  .pstackcards.open + .pspager { display: flex; }
+  .pspos { font-family: "Menlo","Consolas",monospace; font-size: 11.5px; color: var(--dim); }
   .pcard:not(.main) { z-index: 10; }
   .pcardimg { width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--edge);
               background: #0d1019; display: flex; align-items: center; justify-content: center;
@@ -3181,12 +3187,17 @@
        + (mix === 0 ? ' <span class="isdef">default</span>' : "") + "</figcaption></figure>";
     others.forEach(function (o, k) {
       var ph = portraitHTML(id, o.im, 200, 266);
-      if (!STACK_OPEN && k >= 3) ph = ph.replace('<img referrerpolicy="no-referrer" src="', '<img referrerpolicy="no-referrer" data-lsrc="');
+      if (k >= 3) ph = ph.replace('<img referrerpolicy="no-referrer" src="', '<img referrerpolicy="no-referrer" data-lsrc="');
       h += '<figure class="pcard" data-ix="' + o.ix + '" data-k="' + (k + 1) + '"><div class="pcardimg">'
          + ph + "</div><figcaption>" + esc(o.im.l || "Image")
          + (o.ix === 0 ? ' <span class="isdef">default</span>' : "") + "</figcaption></figure>";
     });
     h += "</div>";
+    if (others.length > STACK_PER) {
+      h += '<div class="pspager"><button class="dskarrow" data-pspg="-1" aria-label="Previous pictures">\u2039</button>'
+         + '<span class="pspos"></span>'
+         + '<button class="dskarrow" data-pspg="1" aria-label="More pictures">\u203a</button></div>';
+    }
     if (others.length) {
       h += '<button class="cstackbtn" aria-expanded="' + (STACK_OPEN ? "true" : "false") + '">'
          + '<span class="cstackarr">\u25be</span> <span class="cstacklab">'
@@ -3204,7 +3215,10 @@
     var mw = Math.min(300, W), mh = Math.round(mw * 4 / 3), ml = (W - mw) / 2;
     var cards = box.querySelectorAll(".pcard"), n = cards.length - 1;
     var cw = (W - gap) / 2, chh = Math.round(cw * 4 / 3);
-    var rows = Math.ceil(n / 2), mainH = mh + cap;
+    var pages = Math.max(1, Math.ceil(n / STACK_PER));
+    if (STACK_PG.p > pages - 1) STACK_PG.p = pages - 1;
+    var cur = STACK_PG.p;
+    var rows = Math.min(STACK_PER / 2, Math.ceil(n / 2)), mainH = mh + cap;
     cards.forEach(function (c) {
       c.style.transition = animate ? "" : "none";
       if (c.classList.contains("main")) {
@@ -3214,13 +3228,23 @@
         c.querySelector("figcaption").style.marginTop = (!open && n ? 7 * Math.min(n, 3) + 6 : 5) + "px";
         return;
       }
-      var k = +c.getAttribute("data-k"), row = (k - 1) >> 1, col = (k - 1) & 1;
+      var k = +c.getAttribute("data-k"), pg = Math.floor((k - 1) / STACK_PER), at = (k - 1) % STACK_PER;
+      var row = at >> 1, col = at & 1;
       var ex = col * (cw + gap), ey = mainH + 14 + row * (chh + cap + gap);
+      c.classList.toggle("offpg", open && pg !== cur);
+      if (open && Math.abs(pg - cur) <= 1) {   // this page and its neighbours load their pictures
+        var lz = c.querySelector("img[data-lsrc]");
+        if (lz) { lz.setAttribute("src", lz.getAttribute("data-lsrc")); lz.removeAttribute("data-lsrc"); }
+      }
       c.style.left = ex + "px"; c.style.top = ey + "px"; c.style.width = cw + "px";
       c.querySelector(".pcardimg").style.height = chh + "px";
-      var d = (open ? k : n - k) * 45;
+      var d = (open ? at + 1 : n - k) * 45;
+      if (open && wrap.__pgMove) d = 0;
       c.style.transitionDelay = animate ? d + "ms" : "0ms";
-      if (open) {
+      if (open && pg !== cur) {
+        c.style.transform = "translateX(" + ((pg - cur) * (W + gap)) + "px)";
+        c.style.opacity = "0";
+      } else if (open) {
         c.style.transform = "none";
         c.style.opacity = "1";
       } else {
@@ -3233,11 +3257,30 @@
       }
     });
     if (!animate) { box.offsetHeight; cards.forEach(function (c) { c.style.transition = ""; }); }
+    wrap.__pgMove = false;
+    var pos = wrap.querySelector(".pspos");
+    if (pos) {
+      pos.textContent = "Pictures " + (cur * STACK_PER + 1) + "\u2013" + Math.min(n, (cur + 1) * STACK_PER) + " of " + n;
+      var pb = wrap.querySelectorAll("[data-pspg]");
+      pb[0].disabled = cur <= 0;
+      pb[1].disabled = cur >= pages - 1;
+    }
     box.style.height = (open && n ? mainH + 14 + rows * (chh + cap + gap) : mainH + (n ? 7 * Math.min(n, 3) + 4 : 0)) + "px";
   }
   var STACK_PREV = null;   // the open profile's stack, held across a redraw of the same profile
+  var STACK_PER = 4;       // pictures to a page when the stack is open
+  var STACK_PG = { id: null, p: 0 };
+  function stackPage(wrap, dir) {
+    var n = wrap.querySelectorAll(".pcard").length - 1, pages = Math.ceil(n / STACK_PER);
+    var to = STACK_PG.p + dir;
+    if (to < 0 || to >= pages) return;
+    STACK_PG.p = to;
+    wrap.__pgMove = true;
+    stackLayout(wrap, true);
+  }
   function stackRender(wrap, id, e) {
     if (!wrap) return;
+    if (STACK_PG.id !== id) STACK_PG = { id: id, p: 0 };
     var html = stackHTML(id, e), prev = STACK_PREV;
     STACK_PREV = null;
     if (prev && prev.html === html && prev.node !== wrap && wrap.parentNode) {
@@ -3248,12 +3291,28 @@
     wrap.innerHTML = html;
     wrap.__mlHtml = html;
     stackLayout(wrap, false);
+    wrap.querySelectorAll("[data-pspg]").forEach(function (b) {
+      b.addEventListener("click", function () { stackPage(wrap, +b.getAttribute("data-pspg")); });
+    });
+    // a sideways swipe on the opened pictures turns their page (not the character)
+    (function () {
+      var box = wrap.querySelector(".pstackcards"), x0 = 0, y0 = 0, on = false;
+      if (!box) return;
+      box.addEventListener("touchstart", function (ev) {
+        on = box.classList.contains("open") && ev.touches.length === 1;
+        if (on) { x0 = ev.touches[0].clientX; y0 = ev.touches[0].clientY; }
+      }, { passive: true });
+      box.addEventListener("touchend", function (ev) {
+        if (!on || !ev.changedTouches.length) return;
+        on = false;
+        var dx = ev.changedTouches[0].clientX - x0, dy = ev.changedTouches[0].clientY - y0;
+        if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.2) stackPage(wrap, dx < 0 ? 1 : -1);
+      }, { passive: true });
+    })();
     var btn = wrap.querySelector(".cstackbtn");
     if (btn) btn.addEventListener("click", function () {
       STACK_OPEN = !STACK_OPEN;
-      if (STACK_OPEN) wrap.querySelectorAll("img[data-lsrc]").forEach(function (im) {
-        im.setAttribute("src", im.getAttribute("data-lsrc")); im.removeAttribute("data-lsrc");
-      });
+      if (!STACK_OPEN) STACK_PG.p = 0;   // opened again, it starts from the first four
       wrap.__mlHtml = stackHTML(id, e);
       wrap.querySelector(".pstackcards").classList.toggle("open", STACK_OPEN);
       btn.setAttribute("aria-expanded", STACK_OPEN ? "true" : "false");
@@ -9571,7 +9630,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/673/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/674/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -15801,7 +15860,7 @@
         if (!charView || actorView || charSliding || e.touches.length !== 1) return;
         var tg = e.target;
         if (!tg || !tg.closest || !tg.closest("#charsbody")) return;
-        if (tg.closest("input, textarea, select, .castreel") || sideScroller(tg)) return;
+        if (tg.closest("input, textarea, select, .castreel, .pstackcards.open") || sideScroller(tg)) return;
         x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); drag = false;
       }, { passive: true });
       v.addEventListener("touchmove", function (e) {
