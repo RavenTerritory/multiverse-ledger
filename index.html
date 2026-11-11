@@ -169,6 +169,16 @@
      scrollbar, so there is one scrollbar to grab and the wheel never slips through to it */
   html:has(.focus.open), html:has(.drview.open) { overflow: hidden; }
   .focus, .drview { overscroll-behavior: contain; }
+  /* desktop: arrows beside the "N of M" counter, where the phone swipes */
+  .posnav { display: inline-flex; align-items: center; gap: 8px; }
+  .dskarrow { display: none; }
+  html.desk .dskarrow { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+                        padding: 0 0 2px; border-radius: 50%; border: 1px solid var(--edge); background: var(--panel);
+                        color: var(--paper); font-size: 22px; line-height: 1; cursor: pointer; }
+  html.desk .dskarrow:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  html.desk .dskarrow:disabled { opacity: .3; cursor: default; }
+  html.desk .dskarrow[hidden] { display: none; }
+  html:not(.desk) .deskonly { display: none; }
   .comicsview { --ink: #12151f; --panel: #1b2032; --edge: #2a3148; --paper: #e9e3d0; --dim: #a8a290; --gold: #c9982e;
     --good: #8fbf6a; --bad: #d97757;
     position: fixed; inset: 0; z-index: 80; background: var(--ink); color: var(--paper); display: none; flex-direction: column;
@@ -6292,6 +6302,7 @@
     syncFocusControls();
     if (!vis.length) {
       document.getElementById("fpos").textContent = "";
+      dskNav("f", false);
       document.getElementById("fcover").innerHTML = "";
       document.getElementById("fera").textContent = "";
       document.getElementById("ftitle").textContent = "Nothing matches those filters.";
@@ -6312,6 +6323,7 @@
     var l = curList(), c = countList(l);
 
     document.getElementById("fpos").textContent = (focusIdx + 1) + " of " + vis.length;
+    dskNav("f", true, focusIdx > 0, focusIdx < vis.length - 1);
     var url = coverFor(it);
     document.getElementById("fcover").removeAttribute("data-failed");   // a new picture gets a fresh try
     if (url) {
@@ -6401,7 +6413,8 @@
     var h = "";
 
     h += '<div class="hd"><h1 class="ttl">The Multiverse Ledger</h1>';
-    h += '<button class="gear" id="gear">Lists &amp; backup' + syDotHTML() + '</button></div>';
+    h += '<button class="gear" id="gear">Lists &amp; backup' + syDotHTML() + '</button>'
+       + '<button class="gear deskonly" id="updchk">Check for updates</button></div>';
     h += '<div class="laytog" role="group" aria-label="Layout"><button type="button" data-lay="mobile"'
        + (deskOn() ? "" : ' class="on"') + '>\ud83d\udcf1 Mobile</button><button type="button" data-lay="desktop"'
        + (deskOn() ? ' class="on"' : "") + '>\ud83d\udda5 Desktop</button></div>';
@@ -7266,7 +7279,9 @@
   function focusHTML() {
     var h = '<div class="focus" id="focus">';
     h += '<div class="fbar"><button class="gear" id="fclose">&larr; List view</button>';
-    h += '<span class="pos" id="fpos"></span></div>';
+    h += '<span class="posnav"><button class="dskarrow" id="fprev" aria-label="Previous entry">\u2039</button>'
+       + '<span class="pos" id="fpos"></span>'
+       + '<button class="dskarrow" id="fnext" aria-label="Next entry">\u203a</button></span></div>';
     h += '<div class="fwrap">';
     h += '<div class="cover" id="fcover"></div>';
     h += '<div class="fmeta"><div class="fera" id="fera"></div>';
@@ -8448,7 +8463,9 @@
     return '<div class="focus charsview" id="charsview"><div class="fbar charsbar">'
          + '<button class="gear" id="charsclose">List</button>'
          + '<button class="gear" id="charstotiles">Tiles</button>'
-         + '<span class="pos" id="charspos"></span></div>'
+         + '<span class="posnav"><button class="dskarrow" id="chprev" aria-label="Previous character" hidden>\u2039</button>'
+         + '<span class="pos" id="charspos"></span>'
+         + '<button class="dskarrow" id="chnext" aria-label="Next character" hidden>\u203a</button></span></div>'
          + '<div id="charsbody"></div></div>';
   }
 
@@ -9012,6 +9029,7 @@
     GRID_NEWN = newN;
     if (state.prefs.cNew) shown = shown.filter(charHasNew);
     document.getElementById("charspos").textContent = shown.length + " of " + ids.length;
+    dskNav("ch", false);
 
     var p = state.prefs, l = curList();
     var reals = [], seenR = {}, meds = {};
@@ -9365,6 +9383,7 @@
     var view = document.getElementById("charsview");
     if (view) view.scrollTop = 0;
     document.getElementById("charspos").textContent = "";
+    dskNav("ch", false);
     var groups = actorRoles(name), n = 0;
     groups.forEach(function (g) { n += g.items.length; });
     var h = '<div class="cnav"><button class="gear" id="cback">&larr; Back</button></div>';
@@ -9542,7 +9561,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/671/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/672/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -11003,6 +11022,7 @@
     var nbr = charNeighbours(id);
     document.getElementById("charspos").textContent = nbr.i >= 0 && nbr.list.length > 1
       ? (nbr.i + 1) + " of " + nbr.list.length : "";
+    dskNav("ch", nbr.list.length > 1, !!nbr.prev, !!nbr.next);
     var tabs = lbEarths(id), e0 = lbStartEarth(id, tabs);
     var scopeT = scopeAll() || !e0 ? null : versionTitles(id, e0);
     if (scopeT) apps = apps.filter(function (g) { return g.parts.some(function (p) { return scopeT[p.title]; }); });
@@ -19032,13 +19052,113 @@
         a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
         a.download = "multiverse-ledger-" + v + ".html";
         document.body.appendChild(a); a.click(); a.remove();
-        syBar("Version " + v + " is in your Downloads. Close this window and open the ledger again to use it.", "", null);
+        syBar("Saving version " + v + " to your Downloads\u2026", "", null);
+        deskWaitFor(v);
       } else {
         await ldrPut({ html: html, version: v, savedAt: Date.now() });
         location.reload();
       }
     } catch (e) { syToast("Couldn’t get it: " + ((e && e.message) || e)); }
   }
+  /* ---------- desktop arrows: the same moves as the phone's sideways swipes ---------- */
+  function dskNav(pre, show, hasPrev, hasNext) {
+    var a = document.getElementById(pre + "prev"), b = document.getElementById(pre + "next");
+    if (!a || !b) return;
+    a.hidden = b.hidden = !show;
+    a.disabled = !hasPrev;
+    b.disabled = !hasNext;
+  }
+  document.addEventListener("click", function (e) {
+    var t = e.target && e.target.closest && e.target.closest("#fprev, #fnext, #chprev, #chnext, #updchk");
+    if (!t || t.disabled) return;
+    if (t.id === "fprev" || t.id === "fnext") slideTo(t.id === "fnext" ? 1 : -1);
+    else if (t.id === "chprev" || t.id === "chnext") charStep(t.id === "chnext" ? 1 : -1);
+    else checkUpdates(false);
+  });
+
+  /* ---------- Check for updates ----------
+     In the Windows launcher's window the ledger can look beside its own file, in Downloads,
+     for a higher-numbered one, and opens it in place: no need to close the window. Then the
+     site. On the site itself, the site's version; in the app, the site's version. */
+  function deskSibling(v) {
+    var u = location.href.split("#")[0].split("?")[0], re = /multiverse-ledger-\d+\.html$/;
+    return re.test(u) ? u.replace(re, "multiverse-ledger-" + v + ".html") : "";
+  }
+  function deskHas(v) {
+    return new Promise(function (res) {
+      var u = deskSibling(v);
+      if (!u) { res(false); return; }
+      try {
+        var x = new XMLHttpRequest();
+        x.open("GET", u);
+        x.onload = function () { res(syVersionOf(x.responseText) === v); };
+        x.onerror = function () { res(false); };
+        x.send();
+      } catch (e) { res(false); }
+    });
+  }
+  async function deskNewest() {
+    var tries = [];
+    for (var k = 1; k <= 30; k++) tries.push(LEDGER_VERSION + k);
+    var hits = await Promise.all(tries.map(deskHas)), best = 0;
+    hits.forEach(function (h, k) { if (h) best = tries[k]; });
+    return best;
+  }
+  function deskOpen(v) {
+    try { flushLocal(); } catch (e) {}
+    location.href = deskSibling(v);
+  }
+  function deskOffer(v) { syBar("Version " + v + " is in your Downloads.", "Open it", function () { deskOpen(v); }); }
+  // after "Get it" saves a version to Downloads: offer it as soon as it has landed
+  function deskWaitFor(v) {
+    var n = 0, t = setInterval(async function () {
+      n++;
+      if (await deskHas(v)) { clearInterval(t); deskOffer(v); }
+      else if (n > 60) clearInterval(t);
+    }, 2000);
+  }
+  var UPD_BUSY = false;
+  async function checkUpdates(quiet) {
+    if (UPD_BUSY) return;
+    UPD_BUSY = true;
+    var b = document.getElementById("updchk");
+    if (b && !quiet) { b.disabled = true; b.textContent = "Checking…"; }
+    try {
+      var newest = "You have the newest version (" + LEDGER_VERSION + ").";
+      if (syDeskFile()) {
+        var v = await deskNewest();
+        if (v) { deskOffer(v); return; }
+        var c = syCfg();
+        if (c && c.site) {
+          var sv = await sySiteVersion();
+          if (sv > LEDGER_VERSION) { syBar("Version " + sv + " is on your site.", "Get it", syGetSiteVersion); return; }
+        }
+        if (!quiet) syToast(newest);
+      } else if (syHosted()) {
+        var r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+        var hv = r.ok ? +((await r.json()).v || 0) : 0;
+        if (hv > LEDGER_VERSION) await syHostedCheck();
+        else if (!quiet) syToast(newest);
+      } else if (syCfg() && syCfg().site) {
+        var sv2 = await sySiteVersion();
+        if (sv2 > LEDGER_VERSION) await sySiteCompare(true);
+        else if (!quiet) syToast(sv2 < 0 ? "Couldn’t reach your site to check." : newest);
+      } else if (!quiet) syToast("Connect sync with your site (Lists & backup) to check for new versions.");
+    } catch (e) {
+      if (!quiet) syToast("Couldn’t check: " + ((e && e.message) || e));
+    } finally {
+      UPD_BUSY = false;
+      if (b) { b.disabled = false; b.textContent = "Check for updates"; }
+    }
+  }
+  // Coming back to the launcher's window (say, after downloading a new file): look quietly.
+  var UPD_LAST = 0;
+  window.addEventListener("focus", function () {
+    if (!syDeskFile() || Date.now() - UPD_LAST < 5000) return;
+    UPD_LAST = Date.now();
+    checkUpdates(true);
+  });
+
   // On the site itself: a newer version there means a reload.
   async function syHostedCheck() {
     if (!syHosted()) return;
