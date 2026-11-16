@@ -106,10 +106,15 @@
          display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; }
   .chk.watched { background: var(--gold); border-color: var(--gold); color: var(--ink); }
   .chk.skip { border-color: var(--dim); color: var(--dim); }
+  .chk.lost { border-color: var(--gold); color: var(--gold); border-style: dashed; }
   .itx.skipped { color: var(--dim); opacity: .85; }
+  .itx.lost { color: var(--dim); font-style: italic; }
   .fownlabel { width: 100%; max-width: 320px; margin-top: 16px; font-family: "Menlo","Consolas",monospace;
                font-size: 10.5px; color: var(--dim); text-align: left; }
-  .fdone.skipped { color: var(--dim); }
+  .fdone.skipped, .fdone.lost { color: var(--dim); }
+  .fbtns.flostrow { margin-top: 8px; }
+  .flostrow .fbtn { padding: 9px 10px; font-size: 14px; }
+  .ecbtns.eclost { margin-top: 6px; }
   .it:hover { background: rgba(255,255,255,.03); }
   .itmain { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; cursor: pointer;
              -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -499,14 +504,14 @@
   .ecstage { overflow: hidden; touch-action: pan-y; border-radius: 12px; }
   .eccard { border: 1px solid var(--gold); border-radius: 12px; background: var(--panel); padding: 14px 14px 12px;
             will-change: transform; }
-  .eccard.watched, .eccard.skip { border-color: var(--edge); }
+  .eccard.watched, .eccard.skip, .eccard.lost { border-color: var(--edge); }
   .ectop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .eccode { font-family: "Menlo","Consolas",monospace; font-size: 11px; color: var(--gold); letter-spacing: .05em; }
   .ecelse { font-family: "Menlo","Consolas",monospace; font-size: 9.5px; color: var(--dim); border: 1px solid var(--edge);
             border-radius: 4px; padding: 1px 5px; letter-spacing: .04em; }
   .ecstate { margin-left: auto; font-size: 11.5px; color: var(--good); }
-  .eccard:not(.watched):not(.skip) .ecstate { color: var(--gold); }
-  .eccard.skip .ecstate { color: var(--dim); }
+  .eccard:not(.watched):not(.skip):not(.lost) .ecstate { color: var(--gold); }
+  .eccard.skip .ecstate, .eccard.lost .ecstate { color: var(--dim); }
   .ectitle { font-size: 18px; line-height: 1.3; margin: 6px 0 2px; font-weight: 600; color: var(--paper); }
   .ecbtns { max-width: none; margin: 12px 0 4px; }
   .ecbtns .fbtn { padding: 10px; font-size: 14px; }
@@ -864,6 +869,7 @@
               background: rgba(224,160,64,.12); color: #e8b866; font-size: 13px; line-height: 1.4; }
   .eptitle.done { color: var(--dim); text-decoration: line-through; }
   .eptitle.skipped { color: var(--dim); opacity: .85; }
+  .eptitle.lost { color: var(--dim); font-style: italic; }
   .epinfo { background: none; border: 1px solid var(--edge); color: var(--dim); border-radius: 6px;
             font-size: 12px; width: 28px; height: 28px; cursor: pointer; flex-shrink: 0; }
   .epdetail { border-left: 2px solid var(--gold); padding: 6px 0 10px 10px; margin: 2px 0 8px; }
@@ -1483,11 +1489,15 @@
   FILM_GROUPS.forEach(function (g) { g.forEach(function (t) { WATCH_ALIAS[t] = g[0]; }); });
   function ownKey(t) { return OWN_ALIAS[t] || t; }
   function watchKey(t) { return WATCH_ALIAS[t] || t; }
-  // "" = not watched, "watched", "skip". Older saves stored 1 for watched.
+  /* "" = not watched, "watched", "skip", "lost". Older saves stored 1 for watched.
+     "lost" is lost to time: no copy survives to watch. It counts as watched everywhere
+     progress, trophies and bios are reckoned (watchState reports it as "watched"), so
+     nothing is left impossible to finish; watchMark tells it apart for display. */
   function watchState(t) {
     var v = state.checks[watchKey(t)];
     return v === "skip" ? "skip" : (v ? "watched" : "");
   }
+  function watchMark(t) { return state.checks[watchKey(t)] === "lost" ? "lost" : watchState(t); }
   var KEEP_LOG = false;   // set while a change runs inside guardUnwatch
   var LBVER = 0;          // bumped whenever marks or read bios change, so cached "new" dots refresh
   var WATCHVER = 0;        // bumped only by watch marks (the character grid keeps itself until one changes)
@@ -1502,6 +1512,10 @@
       if (!state.log[k] && prevCheck !== 1 && prevCheck !== true) { state.log[k] = Date.now(); mlAskWhen(k, prevCheck); }
     } else if (st === "skip") {
       state.checks[k] = "skip";
+      if (!KEEP_LOG) delete state.log[k];
+    } else if (st === "lost") {
+      // nothing to date: a lost episode never goes in the diary
+      state.checks[k] = "lost";
       if (!KEEP_LOG) delete state.log[k];
     } else {
       delete state.checks[k];
@@ -1627,12 +1641,12 @@
     try { change(); } finally { KEEP_LOG = false; }
     var lost = Object.keys(state.log || {}).filter(function (k) {
       var was = before[k], now = state.checks[k];
-      return was && was !== "skip" && (!now || now === "skip") && typeof state.log[k] === "number";
+      return was && was !== "skip" && was !== "lost" && (!now || now === "skip" || now === "lost") && typeof state.log[k] === "number";
     });
     // watched with no date (ticked before dates existed, or made undated): still ask
     var bare = Object.keys(before).filter(function (k) {
       var was = before[k], now = state.checks[k];
-      return was && was !== "skip" && (!now || now === "skip") && typeof (state.log || {})[k] !== "number";
+      return was && was !== "skip" && was !== "lost" && (!now || now === "skip") && typeof (state.log || {})[k] !== "number";
     });
     if (!lost.length && !bare.length) return true;
     if (!lost.length) {
@@ -1793,7 +1807,8 @@
          + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
   }
   function nextWatch(st) { return st === "" ? "watched" : st === "watched" ? "skip" : ""; }
-  function watchGlyph(st) { return st === "watched" ? "\u2713" : st === "skip" ? "\u21b7" : ""; }
+  function watchGlyph(st) { return st === "watched" ? "\u2713" : st === "skip" ? "\u21b7" : st === "lost" ? "\u2205" : ""; }
+  function watchCls(st) { return st === "watched" ? " done" : st === "skip" ? " skipped" : st === "lost" ? " lost" : ""; }
 
   // Which continuity each tag belongs to. Every X-Men branch counts as one reality.
   var REALITY = {
@@ -2956,8 +2971,8 @@
          p:  passages, each [unlock, order, text, flags],
          s:  { entry title: the season told as one story, once the season is done } }
      unlock is an entry title, or "entry title#n" for episode n of it. A passage shows
-     once that is ticked as watched. A skip unlocks nothing: a skipped
-     episode may still be watched later, so it stays unspoiled. order is story time, not watch time: the bio is always
+     once that is ticked as watched, or as lost to time (there is nothing left to spoil). A skip
+     unlocks nothing: a skipped episode may still be watched later, so it stays unspoiled. order is story time, not watch time: the bio is always
      sorted by it, so a backstory revealed in season 4 slots in above season 1.
      flags: id (a name other passages can point at), rep (an id, or list of ids, this
      passage supersedes; the intro is never superseded), k (keep this passage in place when its
@@ -4938,12 +4953,13 @@
   function epCounts(title) {
     var eps = epsFor(title);
     if (!eps) return null;
-    var done = 0, sk = 0;
+    var done = 0, sk = 0, lo = 0;
     eps.forEach(function (ep) {
-      var st = watchState(epKey(title, ep.n));
-      if (st === "watched") done++; else if (st === "skip") sk++;
+      var st = watchMark(epKey(title, ep.n));
+      if (st === "watched" || st === "lost") done++; else if (st === "skip") sk++;
+      if (st === "lost") lo++;
     });
-    return { total: eps.length, done: done, skipped: sk };
+    return { total: eps.length, done: done, skipped: sk, lost: lo };
   }
   // Seasons and their episodes stay in step in both directions.
   function pushDown(title, st) {
@@ -4954,15 +4970,16 @@
   /* Marking a season (or anything with its own episodes) marks every episode in it. Easy to
      do by accident when you meant one episode, so ask first unless they are all done already. */
   async function confirmWhole(title, st) {
-    if (st !== "watched") return true;
+    if (st !== "watched" && st !== "lost") return true;
     var eps = epsFor(title);
     if (!eps || !eps.length) return true;
-    var left = eps.filter(function (ep) { return watchState(epKey(title, ep.n)) !== "watched"; }).length;
+    var as = st === "lost" ? "lost to time" : "watched";
+    var left = eps.filter(function (ep) { return watchMark(epKey(title, ep.n)) !== st; }).length;
     if (!left) return true;
-    var v = await choiceDialog("Mark the whole thing as watched?",
-      "<b>" + esc(title) + "</b> has " + eps.length + " episodes, and this marks every one of them as watched"
+    var v = await choiceDialog("Mark the whole thing as " + as + "?",
+      "<b>" + esc(title) + "</b> has " + eps.length + " episodes, and this marks every one of them as " + as
       + (left < eps.length ? " (" + left + " aren\u2019t yet)" : "") + ". To mark a single episode, use the episode list instead.", [
-      { v: "all", label: "Mark all " + eps.length + " watched" },
+      { v: "all", label: "Mark all " + eps.length + " " + as },
       { v: "cancel", label: "Cancel" }
     ]);
     return v === "all";
@@ -4970,7 +4987,8 @@
   function rollUp(title) {
     var c = epCounts(title);
     if (!c) return;
-    if (c.done === c.total) setWatch(title, "watched");
+    // every episode lost to time leaves the season lost too, with no diary date to ask for
+    if (c.done === c.total) setWatch(title, c.lost === c.total ? "lost" : "watched");
     else if (c.done + c.skipped === c.total) setWatch(title, "skip");
     else setWatch(title, "");
   }
@@ -5416,9 +5434,9 @@
   function matches(title) {
     var p = state.prefs;
     if (!inScope(title)) return false;
-    var st = watchState(title);
+    var st = watchMark(title);
     var fw = fArr(p.fWatch, "all");
-    if (fw.length && !fw.some(function (x) { return (x === "yes" && st === "watched") || (x === "skip" && st === "skip") || (x === "no" && st === ""); })) return false;
+    if (fw.length && !fw.some(function (x) { return (x === "yes" && st === "watched") || (x === "skip" && st === "skip") || (x === "lost" && st === "lost") || (x === "no" && st === ""); })) return false;
     if (!fHits("fChar", function (x) { return charsOf(title).indexOf(x) !== -1; })) return false;
     if (!fHits("fOrg", function (x) { return orgsOf(title).indexOf(x) !== -1; })) return false;
     if (!fHits("fObj", function (x) { return objsOf(title).indexOf(x) !== -1; })) return false;
@@ -6146,11 +6164,11 @@
       sn.eps.forEach(function (ep, idx) {
         var prev = idx > 0 ? sn.eps[idx - 1] : null;
         if (prev && prev.at !== ep.at) h += breakHTML(betweenChunks(prev.at, ep.at), ep.d);
-        var ek = show + " \u2022 S" + sn.season + "E" + ep.d, st = watchState(ek);
+        var ek = show + " \u2022 S" + sn.season + "E" + ep.d, st = watchMark(ek);
         h += '<div class="eprow"><div class="epmain" role="button" tabindex="0" data-fek="' + esc(ek) + '">';
         h += '<span class="chk ' + st + '">' + watchGlyph(st) + "</span>";
         h += '<span class="epnum">E' + ep.d + "</span>";
-        h += '<span class="eptitle' + (st === "watched" ? " done" : st === "skip" ? " skipped" : "")
+        h += '<span class="eptitle' + watchCls(st)
            + '">' + esc(ep.t || "Episode " + ep.d) + cwFlag(cwEp(ep.chunk, ep.n)) + "</span></div>";
         h += '<button class="epinfo" data-finfo="' + esc(ek) + '">'
            + (fOpenInfo === ek ? "\u2715" : "\u2139") + "</button></div>";
@@ -6170,7 +6188,7 @@
         var ek = row.getAttribute("data-fek");
         epsOpen = true;
         var ok = await guardUnwatch(function () {
-          setWatch(ek, nextWatch(watchState(ek)));
+          setWatch(ek, nextWatch(watchMark(ek)));
           rollUp(title);          // all episodes done rolls the entry up
         });
         if (!ok) { renderFocus(); return; }
@@ -6254,18 +6272,20 @@
     return { orgs: orgs, objs: epTagFrom(OBJ_BIOS, t, n), locs: epTagFrom(LOC_BIOS, t, n) };
   }
   function epCarCardHTML0(list, i, title) {
-    var x = list[i], ep = x.ep, st = watchState(x.ek);
+    var x = list[i], ep = x.ep, st = watchMark(x.ek);
     var cr = epCredits(ep.chunk, ep), ctx = cr.title || ep.chunk;
     var h = '<div class="eccard' + (st ? " " + st : "") + '">';
     h += '<div class="ectop"><span class="eccode">S' + x.season + " · E" + ep.d + "</span>"
        + (ep.chunk !== title ? '<span class="ecelse">Later in the timeline</span>' : "")
-       + '<span class="ecstate">' + (st === "watched" ? "✓ Watched" : st === "skip" ? "↷ Skipped" : "Up next") + "</span></div>";
+       + '<span class="ecstate">' + (st === "watched" ? "✓ Watched" : st === "skip" ? "↷ Skipped" : st === "lost" ? "\u2205 Lost to time" : "Up next") + "</span></div>";
     h += '<h3 class="ectitle">' + esc(ep.t || "Episode " + ep.d) + cwFlag(cwEp(ep.chunk, ep.n)) + "</h3>";
     var prev = i > 0 ? list[i - 1].ep : null;
     if (prev && prev.at !== ep.at) h += breakHTML(betweenChunks(prev.at, ep.at), ep.d);
     h += cwBanner(cwEp(ep.chunk, ep.n));
     h += '<div class="fbtns ecbtns"><button class="fbtn tog' + (st === "watched" ? " sel" : "") + '" data-ecmark="watched">Watched episode</button>'
-       + '<button class="fbtn tog' + (st === "skip" ? " sel" : "") + '" data-ecmark="skip">Skipped episode</button></div>';
+       + '<button class="fbtn tog' + (st === "skip" ? " sel" : "") + '" data-ecmark="skip">Skipped episode</button></div>'
+       + '<div class="fbtns ecbtns eclost"><button class="fbtn tog' + (st === "lost" ? " sel" : "") + '" data-ecmark="lost"'
+       + ' title="No copy survives to watch. Counts as watched for progress and trophies.">Lost to time</button></div>';
     var chars = epCarChars(cr);
     if (chars.length) {
       h += '<div class="dhead">Characters · ' + chars.length + '</div><div class="chips">';
@@ -6387,7 +6407,7 @@
     box.querySelectorAll("[data-ecmark]").forEach(function (b) {
       b.addEventListener("click", async function () {
         if (epCarBusy) return;
-        var x = list[i], want = b.getAttribute("data-ecmark"), was = watchState(x.ek);
+        var x = list[i], want = b.getAttribute("data-ecmark"), was = watchMark(x.ek);
         var next = was === want ? "" : want;
         if (!was) {
           // an unwatched episode just got its mark: move on to the next unwatched one
@@ -6585,7 +6605,7 @@
     if (focusIdx < 0) focusIdx = 0;
     var it = vis[focusIdx];
     if (!it || it.key !== lastFocusKey) { castOpen = crewOpen = charsOpen = orgsOpen = objsOpen = locsOpen = false; lastFocusKey = it && it.key; }
-    var st = watchState(it.key);
+    var st = watchMark(it.key);
     var l = curList(), c = countList(l);
 
     document.getElementById("fpos").textContent = (focusIdx + 1) + " of " + vis.length;
@@ -6615,8 +6635,8 @@
       fpl.style.display = plats.length ? "" : "none";
     }
     var fd = document.getElementById("fdone");
-    fd.textContent = st === "watched" ? "\u2713 Watched" : st === "skip" ? "\u21b7 Skipped" : "";
-    fd.className = "fdone" + (st === "skip" ? " skipped" : "");
+    fd.textContent = st === "watched" ? "\u2713 Watched" : st === "skip" ? "\u21b7 Skipped" : st === "lost" ? "\u2205 Lost to time" : "";
+    fd.className = "fdone" + (st === "skip" ? " skipped" : st === "lost" ? " lost" : "");
     document.getElementById("fbar-fill").style.width = (c.total ? (c.done / c.total) * 100 : 0) + "%";
     document.getElementById("fcount").textContent = c.done + "/" + c.total;
 
@@ -6625,12 +6645,15 @@
     mark.className = "fbtn tog" + (st === "watched" ? " sel" : "");
     var sk = document.getElementById("fskip");
     sk.className = "fbtn tog" + (st === "skip" ? " sel" : "");
+    var lo = document.getElementById("flost");
+    lo.className = "fbtn tog" + (st === "lost" ? " sel" : "");
     // a TV entry's own buttons cover the whole season (or the run of episodes it holds),
     // so they say so, apart from the episode buttons in the carousel below
     var ci0 = chunkInfo(it.title), noun = "";
     if (ci0) noun = / \u2014 S\d+, eps /.test(it.title) ? " eps " + ci0.from + "\u2013" + ci0.to : " season";
     mark.textContent = (mediumOf(it.title) === "game" ? "Played" : "Watched") + noun;
     sk.textContent = "Skipped" + noun;
+    lo.textContent = "Lost to time" + (noun ? " \u00b7" + noun : "");
     var fcs = document.getElementById("fcover-set");
     if (fcs) fcs.textContent = mediumOf(it.title) === "game" ? "Find box art" : "Find a poster";
     renderOwnRow(it.title);
@@ -6643,7 +6666,7 @@
     var vis = visibleItems();
     var it = vis[focusIdx];
     if (!it) return;
-    var was = watchState(it.key);
+    var was = watchMark(it.key);
     var next = was === "watched" ? "" : "watched";
     if (!(await confirmWhole(it.key, next))) return;
     var ok = await guardUnwatch(function () { setWatch(it.key, next); pushDown(it.key, next); });
@@ -6742,14 +6765,14 @@
          + '</span><span class="ec" data-era="' + ei + '"></span></summary><div class="eb">';
       rows.forEach(function (it) {
         var k = it[1];
-        var st = watchState(k);
+        var st = watchMark(k);
         var color = (l.tags && l.tags[it[0]]) || "#cccccc";
         h += '<div class="it">';
         h += '<div class="ittoggle" role="button" tabindex="0" data-k="' + esc(k) + '" '
-           + 'title="Tap to cycle: not watched \u2192 watched \u2192 skipped">';
+           + 'title="Tap to cycle: not watched \u2192 watched \u2192 skipped' + (st === "lost" ? " (lost to time: tap to clear)" : "") + '">';
         h += '<span class="chk ' + st + '">' + watchGlyph(st) + "</span>";
         h += '<span class="thumb">' + thumbHTML(it[1], it[0], color) + "</span></div>";
-        h += '<span class="itx' + (st === "watched" ? " done" : st === "skip" ? " skipped" : "")
+        h += '<span class="itx' + watchCls(st)
            + '" role="button" tabindex="0" data-t="' + esc(k) + '" data-open="' + esc(k) + '" '
            + 'title="Open in tile view">';
         h += '<span class="tag" style="background:' + color + '">' + esc(it[0]) + "</span>" + esc(it[1]);
@@ -6923,7 +6946,7 @@
 
   function watchOptsHTML() {
     var p = state.prefs, h = "";
-    [["all", "Any"], ["yes", "Watched"], ["skip", "Skipped"], ["no", "Not watched"]].forEach(function (o) {
+    [["all", "Any"], ["yes", "Watched"], ["skip", "Skipped"], ["lost", "Lost to time"], ["no", "Not watched"]].forEach(function (o) {
       h += '<option value="' + o[0] + '"' + (p.fWatch === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
     });
     return h;
@@ -7027,12 +7050,12 @@
     if (open) {
       h += '<div class="eplist">';
       eps.forEach(function (ep) {
-        var ek = epKey(title, ep.n), st = watchState(ek);
+        var ek = epKey(title, ep.n), st = watchMark(ek);
         h += '<div class="eprow"><div class="epmain" role="button" tabindex="0" data-ek="' + esc(ek)
            + '" data-parent="' + esc(title) + '">';
         h += '<span class="chk ' + st + '">' + watchGlyph(st) + "</span>";
         h += '<span class="epnum">E' + (ep.d || ep.n) + "</span>";
-        h += '<span class="eptitle' + (st === "watched" ? " done" : st === "skip" ? " skipped" : "")
+        h += '<span class="eptitle' + watchCls(st)
            + '">' + esc(ep.t || "Episode " + (ep.d || ep.n)) + cwFlag(cwEp(title, ep.n)) + "</span></div>";
         h += '<button class="epinfo" data-info="' + esc(ek) + '">'
            + (openInfo === ek ? "\u2715" : "\u2139") + "</button></div>";
@@ -7555,6 +7578,7 @@
     h += '<h2 class="ftitle" id="ftitle"></h2><div class="fdone" id="fdone"></div><div class="fplat" id="fplat"></div></div>';
     h += '<div class="fbtns"><button class="fbtn tog" id="fmark">Watched</button>';
     h += '<button class="fbtn tog" id="fskip">Skipped</button></div>';
+    h += '<div class="fbtns flostrow"><button class="fbtn tog" id="flost" title="No copy survives to watch. Counts as watched for progress and trophies.">Lost to time</button></div>';
     h += '<div class="fownlabel" id="fownlabel">Physical media</div>';
     h += '<div class="fown" id="fownrow"></div>';
     h += '<div class="dpanel" id="fepcar"></div>';
@@ -9794,7 +9818,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/755/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/756/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -11785,7 +11809,7 @@
     }
     h += '<div class="dhead">Appears in \u00b7 ' + apps.length + '</div><div class="capps">';
     apps.forEach(function (a) {
-      var st = watchState(a.title), oeps = orgEpisodes(id, a.title);
+      var st = watchMark(a.title), oeps = orgEpisodes(id, a.title);
       h += '<button class="capp" data-ogo="' + esc(a.title) + '">'
          + '<span class="chk ' + st + '">' + watchGlyph(st) + "</span>"
          + '<span class="capptext"><span class="capptitle">' + esc(a.title) + "</span>"
@@ -12067,7 +12091,7 @@
     }
     h += '<div class="dhead">Appears in \u00b7 ' + apps.length + '</div><div class="capps">';
     apps.forEach(function (a) {
-      var st = watchState(a.title), eps = objEpisodes(id, a.title);
+      var st = watchMark(a.title), eps = objEpisodes(id, a.title);
       h += '<button class="capp" data-xgo="' + esc(a.title) + '">'
          + '<span class="chk ' + st + '">' + watchGlyph(st) + "</span>"
          + '<span class="capptext"><span class="capptitle">' + esc(a.title) + "</span>"
@@ -12443,7 +12467,7 @@
     }
     h += '<div class="capps">';
     apps.forEach(function (a) {
-      var st = watchState(a.title), eps = [];
+      var st = watchMark(a.title), eps = [];
       a.via.forEach(function (v) { locEpisodes(v, a.title).forEach(function (x) { if (eps.indexOf(x) === -1) eps.push(x); }); });
       var through = a.via.filter(function (v) { return v !== id; });
       h += '<button class="capp" data-lgoent="' + esc(a.title) + '">'
@@ -15561,7 +15585,7 @@
     h += ((EARTH_INFO[id] || {}).b || "").split("\n\n").map(function (pg) { return '<p class="cbio">' + esc(pg) + "</p>"; }).join("");
     h += '<div class="dhead">Entries \u00b7 ' + apps.length + '</div><div class="capps">';
     apps.forEach(function (a) {
-      var st = watchState(a.title);
+      var st = watchMark(a.title);
       h += '<button class="capp" data-ego="' + esc(a.title) + '">'
          + '<span class="chk ' + st + '">' + watchGlyph(st) + "</span>"
          + '<span class="capptext"><span class="capptitle">' + esc(a.title) + "</span>"
@@ -15792,7 +15816,7 @@
     document.querySelectorAll("#app .ittoggle[data-k]").forEach(function (row) {
       var cycle = async function () {
         var k = row.getAttribute("data-k"), wk = watchKey(k);
-        var st = nextWatch(watchState(k));
+        var st = nextWatch(watchMark(k));
         if (!(await confirmWhole(k, st))) return;
         var ok = await guardUnwatch(function () { setWatch(k, st); pushDown(k, st); });
         if (!ok) { render(); return; }
@@ -15802,6 +15826,7 @@
         if (t) {
           t.classList.toggle("done", st === "watched");
           t.classList.toggle("skipped", st === "skip");
+          t.classList.toggle("lost", st === "lost");
         }
         refresh();
         await save();
@@ -15843,7 +15868,7 @@
         // show episodes are keyed by show and season, so the entry is carried on the row
         var parent = row.getAttribute("data-parent");
         var ok = await guardUnwatch(function () {
-          setWatch(ek, nextWatch(watchState(ek)));
+          setWatch(ek, nextWatch(watchMark(ek)));
           rollUp(parent);
         });
         if (!ok) { render(); return; }
@@ -16240,8 +16265,21 @@
     document.getElementById("fskip").addEventListener("click", async function () {
       var vis = visibleItems(), it = vis[focusIdx];
       if (!it) return;
-      var was = watchState(it.key);
+      var was = watchMark(it.key);
       var next = was === "skip" ? "" : "skip";
+      var ok = await guardUnwatch(function () { setWatch(it.key, next); pushDown(it.key, next); });
+      if (!ok) { renderFocus(); return; }
+      await save();
+      renderFocus();
+      if (next) mlAdvanceAfter(it.key, null);
+    });
+    // lost to time: no copy survives, so it counts as watched without a diary date
+    document.getElementById("flost").addEventListener("click", async function () {
+      var vis = visibleItems(), it = vis[focusIdx];
+      if (!it) return;
+      var was = watchMark(it.key);
+      var next = was === "lost" ? "" : "lost";
+      if (!(await confirmWhole(it.key, next))) return;
       var ok = await guardUnwatch(function () { setWatch(it.key, next); pushDown(it.key, next); });
       if (!ok) { renderFocus(); return; }
       await save();
