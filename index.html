@@ -621,7 +621,34 @@
           height: 42px; padding: 0 16px; border-radius: 21px; border: 1px solid rgba(255,255,255,.25);
           background: rgba(20,24,36,.7); color: #fff; font-size: 14px; cursor: pointer; }
   .lbox.focusing .lbfocus { background: var(--gold); color: var(--ink); border-color: var(--gold); }
-  .lbox.focusing { cursor: crosshair; }
+  .lbox .lbfl { position: absolute; inset: 0; z-index: 1; display: none; touch-action: none; cursor: crosshair; }
+  .lbox.focusing .lbfl { display: block; }
+  .lbox.focusing .lbacts, .lbox.focusing .lbcrop { display: none !important; }
+  .lbox .lbfbox { position: absolute; border: 2px solid var(--gold); box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+                  cursor: move; touch-action: none; }
+  .lbox .lbfguide { position: absolute; top: 0; bottom: 0; left: 12.5%; right: 12.5%; pointer-events: none;
+                    border-left: 1px dashed rgba(233,227,208,.65); border-right: 1px dashed rgba(233,227,208,.65); }
+  .lbox .lbfbox i { position: absolute; width: 34px; height: 34px; touch-action: none; }
+  .lbox .lbfbox i::after { content: ""; position: absolute; width: 16px; height: 16px; border: 4px solid var(--gold); }
+  .lbox .lbfbox i[data-c="nw"] { left: -17px; top: -17px; cursor: nwse-resize; }
+  .lbox .lbfbox i[data-c="ne"] { right: -17px; top: -17px; cursor: nesw-resize; }
+  .lbox .lbfbox i[data-c="sw"] { left: -17px; bottom: -17px; cursor: nesw-resize; }
+  .lbox .lbfbox i[data-c="se"] { right: -17px; bottom: -17px; cursor: nwse-resize; }
+  .lbox .lbfbox i[data-c="nw"]::after { left: 13px; top: 13px; border-right: 0; border-bottom: 0; }
+  .lbox .lbfbox i[data-c="ne"]::after { right: 13px; top: 13px; border-left: 0; border-bottom: 0; }
+  .lbox .lbfbox i[data-c="sw"]::after { left: 13px; bottom: 13px; border-right: 0; border-top: 0; }
+  .lbox .lbfbox i[data-c="se"]::after { right: 13px; bottom: 13px; border-left: 0; border-top: 0; }
+  .lbox .lbfbar { position: absolute; left: 0; right: 0; bottom: calc(60px + env(safe-area-inset-bottom)); z-index: 3;
+                  display: none; justify-content: center; align-items: flex-end; gap: 8px; flex-wrap: wrap; padding: 0 12px; }
+  .lbox.focusing .lbfbar { display: flex; }
+  .lbox .lbfbar button { background: rgba(20,24,36,.85); border: 1px solid var(--edge); color: var(--paper);
+                         border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .lbox .lbfbar button[data-lbf="save"] { background: var(--gold); border-color: var(--gold); color: var(--ink); font-weight: 600; }
+  .lbox .lbfprev { display: inline-flex; gap: 6px; align-items: flex-end; margin-right: 4px; }
+  .lbox .lbfprev > span { display: block; overflow: hidden; border-radius: 6px; border: 1px solid var(--edge); background: #000; }
+  .lbox .lbfprev .lbfsq { width: 54px; height: 54px; }
+  .lbox .lbfprev .lbfpt { width: 42px; height: 56px; }
+  .lbox .lbfprev img { width: 100%; height: 100%; object-fit: cover; display: block; }
   body:has(.crop.open) #mlbar, body:has(.lbox.open) #mlbar { display: none; }
   .cslide { scroll-snap-align: center; flex: 0 0 82%; margin: 0; max-width: 320px;
             display: flex; flex-direction: column; justify-content: flex-start; }
@@ -5555,7 +5582,8 @@
   // A crop of a picture that can't be redrawn locally (another site's image) is kept
   // as the original link plus "#mlcrop=left,top,width,height" (fractions) and shown
   // through object-view-box, so nothing is lost and no copy is needed.
-  // The link may carry "#mlcrop=l,t,w,h[,stretch]" and/or "mlpos=x,y" (thumbnail focus, %),
+  // The link may carry "#mlcrop=l,t,w,h[,stretch]" and/or "mlpos=x,y[,w,h]" (thumbnail focus, %:
+  // its centre, and the size of the box drawn round it; an older focus is just the point),
   // joined with "&".
   function mlFrag(u) {
     var m = /#(ml(?:crop|pos)=[^#]*)$/.exec(String(u || "")), o = {};
@@ -5574,26 +5602,41 @@
     var p = mlFrag(u).mlpos;
     if (!p) return null;
     var a = p.split(",").map(Number);
-    return a.length === 2 && !isNaN(a[0]) && !isNaN(a[1]) ? { x: a[0], y: a[1] } : null;
+    if (a.length >= 4 && !a.slice(0, 4).some(isNaN) && a[2] > 0 && a[3] > 0) return { x: a[0], y: a[1], w: a[2], h: a[3] };
+    return a.length >= 2 && !isNaN(a[0]) && !isNaN(a[1]) ? { x: a[0], y: a[1] } : null;
   }
   function cropBase(u) { return String(u || "").replace(/#ml(?:crop|pos)=[^#]*$/, ""); }
   function withFx(base, crop, pos) {
     var parts = [];
     if (crop) parts.push("mlcrop=" + [crop.l, crop.t, crop.w, crop.h].map(function (n) { return n.toFixed(4); }).join(",")
                          + (crop.sx && Math.abs(crop.sx - 1) > 0.001 ? "," + crop.sx.toFixed(3) : ""));
-    if (pos) parts.push("mlpos=" + pos.x.toFixed(1) + "," + pos.y.toFixed(1));
+    if (pos) parts.push("mlpos=" + pos.x.toFixed(1) + "," + pos.y.toFixed(1)
+                        + (pos.w ? "," + pos.w.toFixed(1) + "," + pos.h.toFixed(1) : ""));
     return base + (parts.length ? "#" + parts.join("&") : "");
   }
   // Inline style for a picture: its crop, any stretch that couldn't be baked in, and its focus.
-  function imgFx(u) {
+  /* A thumbnail with a focus box shows just the box. Big views (the profile's main picture
+     and its slides) keep the whole picture and only lean towards the focus. */
+  var ML_OVB = (function () { try { return !!(window.CSS && CSS.supports && CSS.supports("object-view-box", "inset(0px)")); } catch (e) { return false; } })();
+  function imgFx(u, thumb) {
     var st = "", ci = cropInset(u), c = cropOf(u), p = posOf(u);
-    if (ci) st += "object-view-box:" + ci + ";";
+    var bi = thumb !== false && p && p.w && ML_OVB ? boxInset(c, p) : "";
+    if (bi) st += "object-view-box:" + bi + ";";
+    else if (ci) st += "object-view-box:" + ci + ";";
     if (c && Math.abs(c.sx - 1) > 0.001) {
       var m = Math.max(1, 1 / c.sx);
       st += "transform:scale(" + (c.sx * m).toFixed(3) + "," + m.toFixed(3) + ");";
     }
-    if (p) st += "object-position:" + p.x + "% " + p.y + "%;";
+    if (p && !bi) st += "object-position:" + p.x + "% " + p.y + "%;";
     return st;
+  }
+  // The focus box, inside any crop, as a view of the whole picture.
+  function boxInset(c, p) {
+    c = c || { l: 0, t: 0, w: 1, h: 1 };
+    var bx = p.x / 100 - p.w / 200, by = p.y / 100 - p.h / 200;
+    var L = c.l + c.w * bx, T = c.t + c.h * by, R = c.l + c.w * (bx + p.w / 100), B = c.t + c.h * (by + p.h / 100);
+    function pc(n) { return (Math.max(0, n) * 100).toFixed(2) + "%"; }
+    return "inset(" + pc(T) + " " + pc(1 - R) + " " + pc(1 - B) + " " + pc(L) + ")";
   }
   function cropInset(u) {
     var c = cropOf(u);
@@ -5663,7 +5706,7 @@
       var altl = (img.alts || []).slice();
       if (small) altl.unshift(img.u);
       var alts = JSON.stringify(altl).replace(/"/g, "&quot;");
-      var fx = imgFx(img.u);
+      var fx = imgFx(img.u, (w || 300) < 300);
       return '<img referrerpolicy="no-referrer" src="' + esc(small || img.u) + '" alt="" loading="lazy" decoding="async" data-alts="' + alts + '" '
            + (fx ? 'style="' + fx + '" ' : "")
            + 'onerror="window.__mlImgFail(this)">'
@@ -9737,7 +9780,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/750/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/751/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -11036,6 +11079,11 @@
     el.innerHTML = '<div class="lbstage"><img alt=""></div>'
       + '<button class="lbclose" aria-label="Close">\u2715</button>'
       + '<button class="lbcrop">\u2702 Crop / stretch</button><button class="lbfocus">\u25ce Thumbnail focus</button><div class="lbcap"></div>'
+      + '<div class="lbfl"><div class="lbfbox"><div class="lbfguide"></div>'
+      + '<i data-c="nw"></i><i data-c="ne"></i><i data-c="sw"></i><i data-c="se"></i></div></div>'
+      + '<div class="lbfbar"><span class="lbfprev" title="How thumbnails will look"><span class="lbfsq"><img alt=""></span>'
+      + '<span class="lbfpt"><img alt=""></span></span><button data-lbf="save">Save focus</button>'
+      + '<button data-lbf="clear">Clear focus</button><button data-lbf="cancel">Cancel</button></div>'
       + '<div class="lbacts"><button data-lba="assign">Assign to\u2026</button>'
       + '<button data-lba="def">Make default</button><button data-lba="ren">Rename</button>'
       + '<button data-lba="rm" class="lbrm">Remove</button></div>'
@@ -11071,7 +11119,7 @@
       } else g = null;
     }
     el.addEventListener("pointerdown", function (e) {
-      if (e.target.closest(".lbclose, .lbcrop, .lbfocus, .lbacts, .lbassign")) return;
+      if (e.target.closest(".lbclose, .lbcrop, .lbfocus, .lbacts, .lbassign, .lbfl, .lbfbar")) return;
       el.setPointerCapture && el.setPointerCapture(e.pointerId);
       pts[e.pointerId] = { x: e.clientX, y: e.clientY };
       if (list().length === 1) moved = false;
@@ -11102,7 +11150,7 @@
       delete pts[e.pointerId];
       snap();
       if (!wasSingle || moved || e.type === "pointercancel") return;
-      if (el.classList.contains("focusing")) { setFocus(e.clientX, e.clientY); return; }
+      if (el.classList.contains("focusing")) return;
       var now = Date.now();
       if (now - lastTap < 300) {                 // double tap: zoom in there, or back out
         lastTap = 0;
@@ -11125,23 +11173,139 @@
     el.querySelector(".lbcrop").addEventListener("click", function () {
       if (cropCtx) openCrop(LB.src, cropCtx);
     });
-    // Thumbnail focus: tap the part of the picture that small, cropped views should keep.
-    el.querySelector(".lbfocus").addEventListener("click", function () {
-      var on = !el.classList.contains("focusing");
-      el.classList.toggle("focusing", on);
-      el.querySelector(".lbcap").textContent = on ? "Tap the part the thumbnail should centre on" : capText;
-    });
-    function setFocus(cx, cy) {
-      el.classList.remove("focusing");
-      if (!cropCtx || !img.naturalWidth) return;
-      var r = img.getBoundingClientRect(), c0 = cropOf(LB.src);
-      var ar = img.naturalWidth / img.naturalHeight;
+    /* Thumbnail focus: a square box, the shape of a thumbnail, laid over the picture. Drag it
+       to what small views should show; pull a corner (or pinch, or scroll) to make it bigger
+       or smaller. The dashed lines inside mark what tall cards keep of it. A tap outside the
+       box moves it there. Two small previews show the result as it changes. */
+    var FL = el.querySelector(".lbfl"), FB = el.querySelector(".lbfbox"), FBAR = el.querySelector(".lbfbar");
+    var fb = { x: 0.5, y: 0.5, w: 1, h: 1 }, fpts = {}, fg = null, fOrig = "";
+    /* The card opens the viewer with the smaller copy it was showing; the focus belongs to
+       the picture itself, so it is saved against the full link. */
+    function fFind() {
+      var src = LB.src, hit = "";
+      charImgs(cropCtx.id).forEach(function (x) {
+        if (!hit && x.u && (x.u === src || smallSrc(x.u, 640) === src || smallSrc(x.u, 360) === src)) hit = x.u;
+      });
+      return hit || src;
+    }
+    function fRect() {   // where the picture itself sits on the screen
+      var r = img.getBoundingClientRect(), er = el.getBoundingClientRect(), c0 = cropOf(LB.src);
+      var ar = (img.naturalWidth || 1) / (img.naturalHeight || 1);
       if (c0) ar = ar * c0.w / c0.h * (c0.sx || 1);
       var bw = r.width, bh = r.height, cw = bw, ch = bh;
       if (bw / bh > ar) cw = bh * ar; else ch = bw / ar;
-      var x0 = r.left + (bw - cw) / 2, y0 = r.top + (bh - ch) / 2;
-      var p = { x: Math.max(0, Math.min(100, (cx - x0) / cw * 100)), y: Math.max(0, Math.min(100, (cy - y0) / ch * 100)) };
-      var old = LB.src, id = cropCtx.id, nu = withFx(cropBase(old), c0, p);
+      return { x0: r.left - er.left + (bw - cw) / 2, y0: r.top - er.top + (bh - ch) / 2, cw: cw, ch: ch };
+    }
+    function fSide(R) { return Math.sqrt(fb.w * R.cw * fb.h * R.ch); }
+    function fSet(R, side, cx, cy) {   // side in px; centre as a share of the picture
+      var mx = Math.min(R.cw, R.ch), mn = Math.min(mx, Math.max(28, mx * 0.08));
+      side = Math.max(mn, Math.min(mx, side));
+      fb.w = side / R.cw; fb.h = side / R.ch;
+      fb.x = Math.max(fb.w / 2, Math.min(1 - fb.w / 2, cx));
+      fb.y = Math.max(fb.h / 2, Math.min(1 - fb.h / 2, cy));
+    }
+    function fPos() { return { x: fb.x * 100, y: fb.y * 100, w: fb.w * 100, h: fb.h * 100 }; }
+    function fDraw() {
+      var R = fRect();
+      FB.style.left = (R.x0 + (fb.x - fb.w / 2) * R.cw) + "px";
+      FB.style.top = (R.y0 + (fb.y - fb.h / 2) * R.ch) + "px";
+      FB.style.width = (fb.w * R.cw) + "px";
+      FB.style.height = (fb.h * R.ch) + "px";
+      var st = imgFx(withFx(cropBase(fOrig), cropOf(fOrig), fPos()));
+      FBAR.querySelectorAll(".lbfprev img").forEach(function (im) { im.setAttribute("style", st); });
+    }
+    function fStart() {
+      if (!cropCtx) return;
+      if (!img.naturalWidth) { el.querySelector(".lbcap").textContent = "Wait for the picture to load, then try again"; return; }
+      z = { s: 1, x: 0, y: 0 }; pts = {}; g = null; apply(false);
+      fOrig = fFind();
+      var R = fRect(), p = posOf(fOrig);
+      if (p && p.w) { fb = { x: p.x / 100, y: p.y / 100, w: p.w / 100, h: p.h / 100 }; fSet(R, fSide(R), fb.x, fb.y); }
+      else fSet(R, Math.min(R.cw, R.ch), p ? p.x / 100 : 0.5, p ? p.y / 100 : 0.5);
+      var base = cropBase(smallSrc(fOrig, 360) || fOrig);
+      FBAR.querySelectorAll(".lbfprev img").forEach(function (im) { im.src = base; });
+      el.classList.add("focusing");
+      fDraw();
+      el.querySelector(".lbcap").textContent = "Drag the box over what thumbnails should show. Pull a corner, or pinch, to resize.";
+    }
+    function fStop(msg) {
+      el.classList.remove("focusing");
+      fpts = {}; fg = null;
+      el.querySelector(".lbcap").textContent = msg != null ? msg : capText;
+    }
+    function fPt(e) { var er = el.getBoundingClientRect(); return { x: e.clientX - er.left, y: e.clientY - er.top }; }
+    FL.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      if (FL.setPointerCapture) try { FL.setPointerCapture(e.pointerId); } catch (x) {}
+      fpts[e.pointerId] = fPt(e);
+      var R = fRect(), ids = Object.keys(fpts);
+      if (ids.length >= 2) {   // two fingers: pinch to resize
+        var a = fpts[ids[0]], b = fpts[ids[1]];
+        fg = { m: "pinch", d: Math.hypot(b.x - a.x, b.y - a.y) || 1, side: fSide(R) };
+        return;
+      }
+      var p = fpts[e.pointerId], c = e.target.getAttribute && e.target.getAttribute("data-c");
+      var bx0 = R.x0 + (fb.x - fb.w / 2) * R.cw, by0 = R.y0 + (fb.y - fb.h / 2) * R.ch, bw = fb.w * R.cw, bh = fb.h * R.ch;
+      if (c) {   // a corner: the opposite corner stays put
+        fg = { m: "size", ax: c.indexOf("w") !== -1 ? bx0 + bw : bx0, ay: c.charAt(0) === "n" ? by0 + bh : by0 };
+        return;
+      }
+      if (!(p.x >= bx0 && p.x <= bx0 + bw && p.y >= by0 && p.y <= by0 + bh)) {   // outside: the box jumps there
+        fSet(R, fSide(R), (p.x - R.x0) / R.cw, (p.y - R.y0) / R.ch);
+        fDraw();
+      }
+      fg = { m: "move", px: p.x, py: p.y, x: fb.x, y: fb.y };
+    });
+    FL.addEventListener("pointermove", function (e) {
+      if (!fpts[e.pointerId] || !fg) return;
+      fpts[e.pointerId] = fPt(e);
+      var R = fRect(), ids = Object.keys(fpts), p = fpts[e.pointerId];
+      if (fg.m === "pinch") {
+        if (ids.length < 2) return;
+        var a = fpts[ids[0]], b = fpts[ids[1]];
+        fSet(R, fg.side * (Math.hypot(b.x - a.x, b.y - a.y) || 1) / fg.d, fb.x, fb.y);
+      } else if (fg.m === "move") {
+        fSet(R, fSide(R), fg.x + (p.x - fg.px) / R.cw, fg.y + (p.y - fg.py) / R.ch);
+      } else {
+        var dx = p.x - fg.ax, dy = p.y - fg.ay, sx = dx < 0 ? -1 : 1, sy = dy < 0 ? -1 : 1;
+        var room = Math.min(sx > 0 ? R.x0 + R.cw - fg.ax : fg.ax - R.x0, sy > 0 ? R.y0 + R.ch - fg.ay : fg.ay - R.y0);
+        var side = Math.max(1, Math.min(Math.max(Math.abs(dx), Math.abs(dy)), room));
+        var mx = Math.min(R.cw, R.ch), mn = Math.min(mx, Math.max(28, mx * 0.08));
+        side = Math.max(mn, Math.min(mx, side));
+        fSet(R, side, (fg.ax + sx * side / 2 - R.x0) / R.cw, (fg.ay + sy * side / 2 - R.y0) / R.ch);
+      }
+      fDraw();
+    });
+    function fUp(e) {
+      if (!fpts[e.pointerId]) return;
+      delete fpts[e.pointerId];
+      var ids = Object.keys(fpts);
+      if (!ids.length) fg = null;
+      else if (fg && fg.m === "pinch") { var q = fpts[ids[0]]; fg = { m: "move", px: q.x, py: q.y, x: fb.x, y: fb.y }; }
+    }
+    FL.addEventListener("pointerup", fUp);
+    FL.addEventListener("pointercancel", fUp);
+    FL.addEventListener("wheel", function (e) {   // mouse / trackpad: scroll to resize
+      e.preventDefault(); e.stopPropagation();
+      var R = fRect();
+      fSet(R, fSide(R) * (e.deltaY < 0 ? 1.08 : 1 / 1.08), fb.x, fb.y);
+      fDraw();
+    }, { passive: false });
+    window.addEventListener("resize", function () { if (el.classList.contains("focusing")) fDraw(); });
+    el.querySelector(".lbfocus").addEventListener("click", function () {
+      if (el.classList.contains("focusing")) fStop(); else fStart();
+    });
+    FBAR.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-lbf]");
+      if (!b) return;
+      var a = b.getAttribute("data-lbf");
+      if (a === "cancel") fStop();
+      else fSave(a === "save" ? fPos() : null);
+    });
+    function fSave(p) {
+      fStop();
+      if (!cropCtx) return;
+      var old = fOrig || LB.src, id = cropCtx.id, c0 = cropOf(old), nu = withFx(cropBase(old), c0, p);
       var list = charImgs(id).filter(function (x) { return x.u; }).map(function (x) { return x.pin ? [x.u, x.l, 1] : [x.u, x.l]; });
       list.forEach(function (x) { if (x[0] === old) x[0] = nu; });
       state.portraits[id] = list;
@@ -11150,7 +11314,7 @@
       stackDirty = true;
       Promise.resolve(save()).then(function () {
         LB.show(nu, capText, cropCtx);
-        el.querySelector(".lbcap").textContent = "Thumbnail focus saved";
+        el.querySelector(".lbcap").textContent = p ? "Thumbnail focus saved" : "Thumbnail focus cleared";
       });
     }
     LB = {
