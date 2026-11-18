@@ -1246,6 +1246,36 @@
   /* character profile: pictures on the left, the story on the right */
   html.desk .dcols { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 36px; align-items: start; }
   html.desk .dcleft { position: sticky; top: 0; }
+  .caddhead, .cadddrop, .cphov, .cphint { display: none; }
+  html.desk .pcard.main .pcardimg { position: relative; }
+  html.desk .cphov { position: absolute; top: 10px; right: 10px; gap: 6px; z-index: 3; }
+  html.desk .pcard.main:hover .cphov, html.desk .pcard.main:focus-within .cphov { display: flex; }
+  html.desk .pcard.main:hover .cphint { display: block; }
+  html.desk .cphint { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(18,21,31,.82); color: var(--paper);
+                      font-size: 12px; padding: 7px; text-align: center; pointer-events: none; }
+  html.desk .cphov button { border-radius: 20px; padding: 9px 13px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  html.desk .cphadd { background: var(--gold); color: var(--ink); border: 0; font-weight: 700; }
+  html.desk .cphedit { background: rgba(18,21,31,.85); color: var(--paper); border: 1px solid var(--gold); }
+  html.desk .pcard.main.cpdrop .pcardimg { outline: 3px dashed var(--gold); outline-offset: -6px; }
+  /* the add-picture section becomes a popover beside the picture */
+  html.desk details.caddimg > summary { display: none; }
+  html.desk details.caddimg:not([open]) { display: none; }
+  html.desk details.caddimg[open] { position: absolute; left: calc(100% - 28px); width: 380px; z-index: 40; box-sizing: border-box;
+      background: #1d2232; border: 1px solid var(--gold); border-radius: 14px; padding: 18px; margin: 0;
+      text-align: left; box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+  html.desk details.caddimg[open] > *:not(summary) { margin: 0 0 10px; }
+  html.desk details.caddimg[open] > :last-child { margin-bottom: 0; }
+  html.desk details.caddimg[open] .caddhead { display: flex; justify-content: space-between; align-items: center;
+      font-family: Georgia, serif; font-size: 18px; color: var(--paper); }
+  html.desk .caddx { background: none; border: 0; color: var(--dim); font-size: 18px; padding: 4px 8px; cursor: pointer; }
+  html.desk details.caddimg[open] .uplrow { display: flex; }
+  html.desk details.caddimg[open] .uplrow .upllab { display: none; }
+  html.desk details.caddimg[open] .uplrow label.btn { flex: 1; text-align: center; padding: 13px; font-size: 15px; }
+  html.desk details.caddimg[open] .cadddrop { display: block; border: 1px dashed #4a5372; border-radius: 10px;
+      padding: 10px; text-align: center; font-size: 12px; color: var(--dim); }
+  html.desk details.caddimg[open] .csearch { display: block; width: 100%; box-sizing: border-box; }
+  html.desk details.caddimg[open] #caddbtn { display: block; margin-left: auto; background: none; color: var(--paper); border: 1px solid var(--gold); }
+  html.desk details.caddimg[open] .msg:empty { display: none; }
   html.desk .dcright { max-width: 780px; }
   html.desk .dcright .cbio, html.desk .dcright .lbbox { font-size: 15.5px; line-height: 1.6; }
   html.desk .cbig-name { font-size: 30px; }
@@ -7103,6 +7133,81 @@
     if (st) stackLayout(st, false);
   }
 
+  /* Desktop only: hovering the main picture shows Add picture and Edit. Add opens the
+     add-picture section as a popover beside the picture, Upload first; Edit opens the crop
+     editor straight on the picture shown. An image file dropped on the picture is uploaded. */
+  function deskPicTools(body, id) {
+    if (!deskOn()) return;
+    var main = body.querySelector("#cstack .pcard.main"), pop = body.querySelector("details.caddimg");
+    if (!main || !pop) return;
+    var box = main.querySelector(".pcardimg");
+    if (!box.querySelector(".cphov")) {
+      var hv = document.createElement("div");
+      hv.className = "cphov";
+      hv.innerHTML = '<button type="button" class="cphadd">+ Add picture</button>'
+        + '<button type="button" class="cphedit">\u2702 Edit</button>';
+      box.appendChild(hv);
+      var hint = document.createElement("div");
+      hint.className = "cphint";
+      hint.textContent = "Click to view full size";
+      box.appendChild(hint);
+    }
+    var im = main.querySelector("img"), real = im && im.style.display !== "none" && im.getAttribute("src");
+    box.querySelector(".cphedit").style.display = real ? "" : "none";
+    box.querySelector(".cphint").style.visibility = real ? "" : "hidden";
+    var msg = body.querySelector("#cmoremsg");
+    if (msg && msg.parentNode !== pop) pop.appendChild(msg);
+    // Upload and the drop hint go first, straight under the heading
+    var hd = pop.querySelector(".caddhead"), up = pop.querySelector(".uplrow"), dr = pop.querySelector(".cadddrop");
+    if (hd && up && dr && hd.nextElementSibling !== up) {
+      pop.insertBefore(up, hd.nextSibling);
+      pop.insertBefore(dr, up.nextSibling);
+    }
+    function place() {
+      var st = body.querySelector("#cstack");
+      pop.style.top = (st ? st.offsetTop : 0) + "px";
+    }
+    function close() { pop.open = false; }
+    box.querySelector(".cphadd").onclick = function (ev) {
+      ev.stopPropagation();
+      place();
+      pop.open = !pop.open;
+    };
+    box.querySelector(".cphedit").onclick = function (ev) {
+      ev.stopPropagation();
+      var src = im && im.getAttribute("src");
+      if (src) openCrop(src, { id: id, ix: +main.getAttribute("data-ix"), direct: true });
+    };
+    pop.querySelector(".caddx").onclick = close;
+    pop.onkeydown = function (ev) { if (ev.key === "Escape") close(); };
+    // a click anywhere else closes it
+    if (!document.__mlPopShut) {
+      document.__mlPopShut = true;
+      document.addEventListener("mousedown", function (ev) {
+        var p = document.querySelector("html.desk details.caddimg[open]");
+        if (!p || p.contains(ev.target) || (ev.target.closest && ev.target.closest(".cphadd"))) return;
+        p.open = false;
+      });
+    }
+    var cf = pop.querySelector("#cfile");
+    main.ondragover = function (ev) {
+      if (ev.dataTransfer && Array.prototype.indexOf.call(ev.dataTransfer.types || [], "Files") !== -1) {
+        ev.preventDefault(); main.classList.add("cpdrop");
+      }
+    };
+    main.ondragleave = function () { main.classList.remove("cpdrop"); };
+    main.ondrop = function (ev) {
+      ev.preventDefault(); main.classList.remove("cpdrop");
+      var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+      if (!f || !/^image\//.test(f.type) || !cf) return;
+      try {
+        var dt = new DataTransfer(); dt.items.add(f); cf.files = dt.files;
+      } catch (x) { return; }
+      place(); pop.open = true;
+      cf.dispatchEvent(new Event("change"));
+    };
+  }
+
   function ownSelectHTML(k) {
     var v = state.owned[ownKey(k)] || "";
     var cls = v ? (v === "owned" ? "owned" : v === "wish" ? "wish" : v === "none" ? "none" : "nophys") : "";
@@ -10029,7 +10134,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/809/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/810/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -11322,7 +11427,7 @@
       var ok = await save();
       if (ok === false) { alert("Couldn\u2019t save the crop \u2014 this device\u2019s storage for the app is full."); return; }
       cropSaved = id;
-      goBack();                          // closes the crop editor, then the viewer
+      goBack();                          // closes the crop editor (and then the viewer, if it was open)
     });
     var cropClose = function () {
       cropEditor().close();
@@ -11330,7 +11435,7 @@
         var id = cropSaved;
         cropSaved = null;
         setTimeout(function () {
-          goBack();                      // leave the full-screen viewer too
+          if (!ctx.direct) goBack();     // leave the full-screen viewer too (unless it wasn't open)
           setTimeout(function () { if (isKindKey(id)) rerenderFor(id); else if (charView === id) renderChars(); }, 60);
         }, 30);
       }
@@ -11647,11 +11752,13 @@
     h += '<button class="mini" id="cclear">Clear fetched</button><button class="mini" id="cpcheck">Picture check</button></div>';
     h += '<div class="pcheck" id="pcheckout" hidden></div>';
     h += '<details class="more caddimg"><summary>Add a picture</summary>';
+    h += '<div class="caddhead"><span>Add a picture</span><button class="caddx" type="button" aria-label="Close">\u2715</button></div>';
     h += '<input class="csearch" id="caddurl" type="url" placeholder="https://\u2026 image link">';
     h += '<input class="csearch" id="caddlab" type="text" placeholder="Label, e.g. Out of costume">';
     h += '<button class="btn" id="caddbtn">Add link</button>';
     h += '<div class="uplrow"><span class="upllab">or</span><label class="btn" for="cfile">Upload from this device</label>'
-       + '<input type="file" accept="image/*" id="cfile" class="uplin"></div></details>';
+       + '<input type="file" accept="image/*" id="cfile" class="uplin"></div>'
+       + '<div class="cadddrop">\u2026or drop an image on the picture</div></details>';
     h += '<div class="msg" id="cmoremsg"></div>';
     h += tabs.length ? '<div class="lbbox" id="lbbox">' + lbBodyHTML(id, e0) + "</div>"
                      : '<p class="cbio dnone">No summary written yet.</p>';
@@ -11725,6 +11832,7 @@
     stackRender(body.querySelector("#cstack"), id, e0);
     hulkVerify(id);
     deskCharCols(body);
+    deskPicTools(body, id);
     body.querySelectorAll("[data-scope]").forEach(function (b) {
       b.addEventListener("click", async function () {
         var v = b.getAttribute("data-scope");
