@@ -9783,9 +9783,9 @@
         var d = arcOfGrid(b).total - arcOfGrid(a).total;
         return d || byName(charName(a), charName(b));
       });
-    } else if (state.prefs.cSort === "entries") {
-      var cEnt = {};
-      shown.forEach(function (c) { cEnt[c] = entryTally(scopedGroups(c), function (g) { return groupUnits(c, g); }).n; });
+    } else if (state.prefs.cSort === "entries" || state.prefs.cSort === "shows") {
+      var cEnt = {}, cBy = state.prefs.cSort === "shows";
+      shown.forEach(function (c) { cEnt[c] = entryTally(scopedGroups(c), function (g) { return groupUnits(c, g); }, cBy).n; });
       shown.sort(function (a, b) {
         return (cEnt[b] - cEnt[a]) || (arcOfGrid(b).total - arcOfGrid(a).total) || byName(charName(a), charName(b));
       });
@@ -9860,15 +9860,28 @@
                            realOpen, Object.keys(state.portraits || {}).length]);
   }
   // Entries rather than episodes: an entry counts as watched once all its units are.
-  function entryTally(list, unitsOf) {
-    var n = 0, w = 0;
+  // What counts as one entry: a season (however many parts it is split into), a film
+  // (however many cuts), or with byShow a whole show.
+  function entryKeyOf(t, byShow) {
+    var ci = chunkInfo(t);
+    if (ci) return byShow ? "show:" + ci.show : "season:" + ci.show + "\u0001" + ci.season;
+    return "t:" + (filmBase(t) || t);
+  }
+  function entryTally(list, unitsOf, byShow) {
+    var by = {}, keys = [];
     list.forEach(function (x) {
       var us = unitsOf(x);
       if (!us.length) return;
-      n++;
-      if (us.every(function (u) { return u.st === "watched"; })) w++;
+      var k = entryKeyOf(x.title, byShow);
+      if (!by[k]) { by[k] = []; keys.push(k); }
+      by[k] = by[k].concat(us);
     });
-    return { n: n, w: w };
+    var w = 0;
+    keys.forEach(function (k) { if (by[k].every(function (u) { return u.st === "watched"; })) w++; });
+    return { n: keys.length, w: w };
+  }
+  function entryKeysOfTitles(ts, byShow) {
+    var o = {}; ts.forEach(function (t) { o[entryKeyOf(t, byShow)] = 1; }); return Object.keys(o).length;
   }
   function countLine(a, ent) {
     if (ent) return ent.w + " / " + ent.n + (ent.n === 1 ? " entry" : " entries");
@@ -9880,8 +9893,8 @@
          + '<span class="cthumb">' + gridPortrait(c) + (charHasNew(c) ? '<span class="cnew" title="New in the story so far"></span>' : "") + "</span>"
          + '<span class="cname">' + esc(charName(c)) + "</span>"
          + arcBar(a)
-         + '<span class="ccount">' + countLine(a, state.prefs.cSort === "entries"
-             ? entryTally(scopedGroups(c), function (g) { return groupUnits(c, g); }) : null)
+         + '<span class="ccount">' + countLine(a, state.prefs.cSort === "entries" || state.prefs.cSort === "shows"
+             ? entryTally(scopedGroups(c), function (g) { return groupUnits(c, g); }, state.prefs.cSort === "shows") : null)
          + "</span></button>";
   }
   function wireCharCard(b) {
@@ -9984,6 +9997,7 @@
     h += '<div class="fgrp"><span>Sort</span><select class="fsel" id="csort">';
     h += '<option value="az"' + (p.cSort === "az" ? " selected" : "") + ">A\u2013Z</option>";
     h += '<option value="entries"' + (p.cSort === "entries" ? " selected" : "") + ">Most entries (a season counts once)</option>";
+    h += '<option value="shows"' + (p.cSort === "shows" ? " selected" : "") + ">Most entries (a show counts once)</option>";
     h += '<option value="count"' + (p.cSort === "count" ? " selected" : "") + ">Most episodes (each episode counts)</option>";
     h += '<option value="arc"' + (p.cSort === "arc" ? " selected" : "") + ">Arc least finished</option>";
     h += '<option value="random"' + (p.cSort === "random" ? " selected" : "") + ">Random</option>";
@@ -10462,7 +10476,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/964/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/965/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -12386,9 +12400,10 @@
         var d = orgArc(b).total - orgArc(a).total;
         return d || byOrgName(orgName(a), orgName(b));
       });
-    } else if (state.prefs.oSort === "entries") {
+    } else if (state.prefs.oSort === "entries" || state.prefs.oSort === "shows") {
+      var oBy = state.prefs.oSort === "shows";
       shown = shown.slice().sort(function (a, b) {
-        var en = function (o) { return entryTally(orgAppearances(o), function (x) { return orgUnits(o, x.title); }).n; };
+        var en = function (o) { return entryTally(orgAppearances(o), function (x) { return orgUnits(o, x.title); }, oBy).n; };
         return (en(b) - en(a)) || (orgArc(b).total - orgArc(a).total)
             || byOrgName(orgName(a), orgName(b));
       });
@@ -12398,6 +12413,7 @@
           + '<select class="fsel" id="osort">'
           + '<option value="az"' + (state.prefs.oSort === "az" ? " selected" : "") + ">A\u2013Z</option>"
           + '<option value="entries"' + (state.prefs.oSort === "entries" ? " selected" : "") + ">Most entries (a season counts once)</option>"
+          + '<option value="shows"' + (state.prefs.oSort === "shows" ? " selected" : "") + ">Most entries (a show counts once)</option>"
           + '<option value="count"' + (state.prefs.oSort === "count" ? " selected" : "")
           + ">Most episodes (each episode counts)</option></select></div></div>";
     h += '<input class="csearch" id="osearch" type="search" placeholder="Search organisations" value="'
@@ -12409,8 +12425,8 @@
          + '<span class="cthumb">' + portraitHTML("org:" + o, charImgs("org:" + o)[0], 160, 160) + "</span>"
          + '<span class="cname">' + esc(orgName(o)) + "</span>"
          + arcBar(a)
-         + '<span class="ccount">' + countLine(a, state.prefs.oSort === "entries"
-             ? entryTally(orgAppearances(o), function (x) { return orgUnits(o, x.title); }) : null) + "</span></button>";
+         + '<span class="ccount">' + countLine(a, state.prefs.oSort === "entries" || state.prefs.oSort === "shows"
+             ? entryTally(orgAppearances(o), function (x) { return orgUnits(o, x.title); }, state.prefs.oSort === "shows") : null) + "</span></button>";
     });
     body.innerHTML = h + "</div>";
     var os = document.getElementById("osort");
@@ -12648,9 +12664,9 @@
     var done = function (o) { var g = objProgress(o); return g.tot ? g.seen / g.tot : 0; };
     if (p.xSort === "az") {
       shown.sort(function (a, b) { return byOrgName(objName(a), objName(b)); });
-    } else if (p.xSort === "count") {
-      var xEnt = {};
-      shown.forEach(function (o) { xEnt[o] = entryTally(objAppearances(o), function (x) { return objUnits(o, x.title); }).n; });
+    } else if (p.xSort === "count" || p.xSort === "shows") {
+      var xEnt = {}, xBy = p.xSort === "shows";
+      shown.forEach(function (o) { xEnt[o] = entryTally(objAppearances(o), function (x) { return objUnits(o, x.title); }, xBy).n; });
       shown.sort(function (a, b) {
         return (xEnt[b] - xEnt[a]) || (objArc(b).total - objArc(a).total) || byOrgName(objName(a), objName(b));
       });
@@ -12664,7 +12680,7 @@
       shown.sort(function (a, b) { return (done(a) - done(b)) || byOrgName(objName(a), objName(b)); });
     }
     document.getElementById("objspos").textContent = shown.length + " of " + ids.length + " artifacts";
-    var SORTS = [["line", "Story order"], ["az", "A\u2013Z"], ["count", "Most entries (a season counts once)"], ["eps", "Most episodes (each episode counts)"], ["done", "Least uncovered"]];
+    var SORTS = [["line", "Story order"], ["az", "A\u2013Z"], ["count", "Most entries (a season counts once)"], ["shows", "Most entries (a show counts once)"], ["eps", "Most episodes (each episode counts)"], ["done", "Least uncovered"]];
     var h = '<div class="frow2"><div class="fgrp wide"><span>Sort</span><select class="fsel" id="xsort">';
     SORTS.forEach(function (o) {
       h += '<option value="' + o[0] + '"' + ((p.xSort || "line") === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
@@ -12682,8 +12698,8 @@
          + '<span class="cthumb">' + portraitHTML("obj:" + o, charImgs("obj:" + o)[0], 160, 160) + "</span>"
          + '<span class="cname">' + esc(objName(o)) + "</span>"
          + arcBar(a)
-         + '<span class="ccount">' + countLine(a, p.xSort === "count"
-             ? entryTally(objAppearances(o), function (x) { return objUnits(o, x.title); }) : null)
+         + '<span class="ccount">' + countLine(a, p.xSort === "count" || p.xSort === "shows"
+             ? entryTally(objAppearances(o), function (x) { return objUnits(o, x.title); }, p.xSort === "shows") : null)
          + "</span></button>";
     });
     body.innerHTML = h + "</div>";
@@ -12987,9 +13003,9 @@
     var done = function (o) { var g = locProgress(o); return g.tot ? g.seen / g.tot : 0; };
     if (p.lSort === "az") {
       shown.sort(function (a, b) { return byOrgName(locName(a), locName(b)); });
-    } else if (p.lSort === "count") {
-      var lEnt = {};
-      shown.forEach(function (o) { lEnt[o] = entryTally(locAppearances(o, true), function (x) { return locUnits(x.via, x.title); }).n; });
+    } else if (p.lSort === "count" || p.lSort === "shows") {
+      var lEnt = {}, lBy = p.lSort === "shows";
+      shown.forEach(function (o) { lEnt[o] = entryTally(locAppearances(o, true), function (x) { return locUnits(x.via, x.title); }, lBy).n; });
       shown.sort(function (a, b) {
         return (lEnt[b] - lEnt[a]) || (locArc(b).total - locArc(a).total) || byOrgName(locName(a), locName(b));
       });
@@ -13004,7 +13020,7 @@
       shown.sort(function (a, b) { return (done(a) - done(b)) || byOrgName(locName(a), locName(b)); });
     }
     document.getElementById("locspos").textContent = shown.length + " of " + ids.length + " locations";
-    var SORTS = [["line", "Story order"], ["az", "A–Z"], ["count", "Most entries (a season counts once)"], ["eps", "Most episodes (each episode counts)"], ["done", "Least uncovered"]];
+    var SORTS = [["line", "Story order"], ["az", "A–Z"], ["count", "Most entries (a season counts once)"], ["shows", "Most entries (a show counts once)"], ["eps", "Most episodes (each episode counts)"], ["done", "Least uncovered"]];
     var h = '<div class="frow2"><div class="fgrp wide"><span>Sort</span><select class="fsel" id="lsort">';
     SORTS.forEach(function (o) {
       h += '<option value="' + o[0] + '"' + ((p.lSort || "line") === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
@@ -13034,8 +13050,8 @@
          + '<span class="cname">' + esc(locName(o)) + "</span>"
          + '<span class="lkind">' + esc((LOCS[o] || {}).k || "Location") + (wh ? " · " + esc(wh) : "") + "</span>"
          + arcBar(a)
-         + '<span class="ccount">' + countLine(a, p.lSort === "count"
-             ? entryTally(locAppearances(o, true), function (x) { return locUnits(x.via, x.title); }) : null)
+         + '<span class="ccount">' + countLine(a, p.lSort === "count" || p.lSort === "shows"
+             ? entryTally(locAppearances(o, true), function (x) { return locUnits(x.via, x.title); }, p.lSort === "shows") : null)
          + "</span></button>";
     });
     body.innerHTML = h + "</div>";
@@ -14309,7 +14325,7 @@
             && !ids.some(function (id) { return charName(id).toLowerCase().indexOf(q) !== -1; })) return;
       var ents = {};
       ids.forEach(function (id) { a.roles[id].forEach(function (t) { if (actTitlePasses(t)) ents[t] = 1; }); });
-      var row = { a: a, n: ids.length, e: Object.keys(ents).length };
+      var row = { a: a, n: ids.length, e: entryKeysOfTitles(Object.keys(ents), false), sh: entryKeysOfTitles(Object.keys(ents), true) };
       row.ep = function () {
         if (row._ep != null) return row._ep;
         var seen = {};
@@ -14329,6 +14345,7 @@
     rows.sort(function (x, y) {
       if (s === "roles") return (y.n - x.n) || (y.e - x.e) || byName(x.a.name, y.a.name);
       if (s === "entries") return (y.e - x.e) || (y.n - x.n) || byName(x.a.name, y.a.name);
+      if (s === "shows") return (y.sh - x.sh) || (y.e - x.e) || byName(x.a.name, y.a.name);
       if (s === "eps") return (y.ep() - x.ep()) || (y.e - x.e) || byName(x.a.name, y.a.name);
       return byName(x.a.name, y.a.name);
     });
@@ -14340,7 +14357,7 @@
           + '<button class="ahead" data-atog="' + esc(r.a.name) + '" aria-expanded="' + open + '">'
           + '<span class="aname"><span class="aarrow">\u25b8</span>' + esc(r.a.name) + memMark(r.a.name) + "</span>"
           + '<span class="acount">' + r.n + (r.n === 1 ? " character" : " characters") + " \u00b7 "
-          + r.e + (r.e === 1 ? " entry" : " entries")
+          + ((state.prefs.aSort || "az") === "shows" ? r.sh + (r.sh === 1 ? " entry" : " entries") : r.e + (r.e === 1 ? " entry" : " entries"))
           + ((state.prefs.aSort || "az") === "eps" ? " \u00b7 " + r.ep() + (r.ep() === 1 ? " episode" : " episodes") : "") + "</span></button>";
     if (ACTOR_MEMORIAL[r.a.name]) h += '<button class="celeblink actmem" data-celeb="' + esc(r.a.name) + '">' + MEM_ICON + " In memoriam \u00b7 "
         + esc(ACTOR_MEMORIAL[r.a.name].years) + ((MEM_CELEB[r.a.name] || []).length ? " \u00b7 Celebrations of life \u2192" : "") + "</button>";
@@ -14376,7 +14393,7 @@
     var body = document.getElementById("actsbody");
     if (!body) return;
     var p = state.prefs, l = curList();
-    var SORTS = [["az", "A\u2013Z by surname"], ["roles", "Most characters"], ["entries", "Most entries (a season counts once)"], ["eps", "Most episodes (each episode counts)"]];
+    var SORTS = [["az", "A\u2013Z by surname"], ["roles", "Most characters"], ["entries", "Most entries (a season counts once)"], ["shows", "Most entries (a show counts once)"], ["eps", "Most episodes (each episode counts)"]];
     var h = '<div class="frow2"><div class="fgrp wide"><span>Sort</span><select class="fsel" id="asort">';
     SORTS.forEach(function (o) {
       h += '<option value="' + o[0] + '"' + ((p.aSort || "az") === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
@@ -16207,6 +16224,7 @@
     if (earthView) { renderEarthDetail(body, earthView); return; }
     var p = state.prefs;
     var eScoped = function (e) { return earthAppearances(e).filter(function (x) { return inScope(x.title); }); };
+    var eEnt = function (e, byShow) { return entryKeysOfTitles(eScoped(e).map(function (x) { return x.title; }), byShow); };
     var ids = allEarthIds().filter(function (e) { return eScoped(e).length > 0; });
     // every episode counts on its own; a film, special or game with no episodes counts once
     var epMemo = {};
@@ -16236,7 +16254,11 @@
       shown.sort(function (a, b) { return earthName(a).localeCompare(earthName(b), undefined, { numeric: true }); });
     } else if (p.eSort === "count") {
       shown.sort(function (a, b) {
-        return (eScoped(b).length - eScoped(a).length) || (num(a) - num(b));
+        return (eEnt(b) - eEnt(a)) || (num(a) - num(b));
+      });
+    } else if (p.eSort === "shows") {
+      shown.sort(function (a, b) {
+        return (eEnt(b, true) - eEnt(a, true)) || (eEnt(b) - eEnt(a)) || (num(a) - num(b));
       });
     } else if (p.eSort === "eps") {
       shown.sort(function (a, b) {
@@ -16250,7 +16272,7 @@
     }
     document.getElementById("earthspos").textContent = shown.length + " of " + ids.length + " realities";
     var SORTS = [["line", "Timeline order"], ["num", "Earth number"],
-                 ["count", "Most entries (a season counts once)"], ["eps", "Most episodes (each episode counts)"],
+                 ["count", "Most entries (a season counts once)"], ["shows", "Most entries (a show counts once)"], ["eps", "Most episodes (each episode counts)"],
                  ["done", "Least finished"]];
     var h = '<div class="frow2"><div class="fgrp"><span>Sort</span><select class="fsel" id="esort">';
     SORTS.forEach(function (o) {
@@ -16272,7 +16294,7 @@
       h += '<span class="cname">' + esc(earthName(e)) + "</span>";
       h += '<span class="ccount">' + esc(earthShort(e)) + "</span>";
       if (p.eSort === "eps") { var ne = eEps(e); h += '<span class="ccount">' + ne + (ne === 1 ? " episode" : " episodes") + "</span></button>"; }
-      else h += '<span class="ccount">' + n + (n === 1 ? " entry" : " entries") + "</span></button>";
+      else { var ee = eEnt(e, p.eSort === "shows"); h += '<span class="ccount">' + ee + (ee === 1 ? " entry" : " entries") + "</span></button>"; }
     });
     body.innerHTML = h + "</div>";
     var eso = document.getElementById("eshowother"), esg = document.getElementById("eshowotherg");
