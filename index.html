@@ -3979,7 +3979,8 @@
     // "flamingo") leaves the name in front a personal name, filed under its surname.
     var descr = m && (/^[a-z]/.test(m[2]) || /'s\b/.test(m[2]) || NAME_FIRST[n] === 1);
     var mantle = (!!m && !descr) || / the /i.test(base) || /^the\s/i.test(base)   // "Uatu the Watcher" is one name, not two
-              || /\s\d+$/.test(base);   // "Iron Man 2099": a year is not a surname, so it files as written
+              || /\s\d+$/.test(base)   // "Iron Man 2099": a year is not a surname, so it files as written
+              || /\s[A-Za-z0-9]$/.test(base);   // "System A": a lone letter is not a surname either
     base = base.replace(/^(the|a|an|los|las|le|la)\s+/i, "").trim();
     if (!mantle && personal !== false) {
       var guard = 2;
@@ -10513,7 +10514,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/966/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/968/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -17351,11 +17352,38 @@
     // Toei's Spider-Man: its monsters and civilians are in the tokusatsu wikis, not the Marvel ones
     "51778":  [{ n: "Tokusatsu Wiki", u: "https://tokusatsu.fandom.com" }, { n: "Villains Wiki", u: "https://villains.fandom.com" }]
   };
+  /* Capcom's own fighters are best covered by the wiki of the game they come from. */
+  var CAPCOM_WIKI = {
+    sf:  { n: "Street Fighter Wiki", u: "https://streetfighter.fandom.com" },
+    ds:  { n: "Darkstalkopedia", u: "https://darkstalkers.fandom.com" },
+    mm:  { n: "Mega Man Knowledge Base", u: "https://megaman.fandom.com" },
+    re:  { n: "Resident Evil Wiki", u: "https://residentevil.fandom.com" },
+    dmc: { n: "Devil May Cry Wiki", u: "https://devilmaycry.fandom.com" }
+  };
+  var CHAR_FRANCHISE = {
+    ryu_sf: "sf", kenmasters: "sf", chunli_sf: "sf", akuma_sf: "sf", cyberakuma: "sf", charlie_sf: "sf", shadow_sf: "sf",
+    cammy_sf: "sf", danhibiki: "sf", dhalsim_sf: "sf", guile_sf: "sf", mbison_sf: "sf", sakura_sf: "sf", darksakura: "sf",
+    zangief_sf: "sf", cviper: "sf",
+    morrigan_ds: "ds", felicia_ds: "ds", lilith_ds: "ds", hsienko_ds: "ds", anakaris_ds: "ds", bbhood_ds: "ds", anita_ds: "ds", jedah: "ds",
+    megaman: "mm", megamanx: "mm", roll_mm: "mm", zero_mmx: "mm", sigma_mmx: "mm", tronbonne: "mm", servbot: "mm",
+    wesker: "re", jillvalentine: "re", chrisredfield: "re", nemesis_re: "re",
+    dante_dmc: "dmc", vergil_dmc: "dmc", trish_dmc: "dmc"
+  };
+  /* A fighter found only in Capcom's Marvel games (Earth-30847) is looked up in its own game's
+     wiki, then the Marvel vs. Capcom Wiki and the Capcom Database. Characters who are also in
+     other things keep their usual wikis; those two come in only on their Capcom tab. */
+  function franchiseWikis(id) {
+    var f = CHAR_FRANCHISE[id], out = f ? [CAPCOM_WIKI[f]] : [];
+    var es = charEarthList(id);
+    if (es.length && es.every(function (e) { return e === "30847"; }))
+      out.push({ n: "Marvel vs. Capcom Wiki", u: "https://marvelvscapcom.fandom.com" }, { n: "Capcom Database", u: "https://capcom.fandom.com" });
+    return out;
+  }
   /* Those universes' people aren't in the general Marvel wikis, where a name search
      only turns up same-named strangers ("Merlin", "Agent K", "Charlie"). A character
      found only there skips the general wikis; the Marvel Database still answers for the
      exact "(Earth-...)" page, when it has one. */
-  var OWN_ONLY = { "1010": 1, "12933": 1, "97669": 1, "1219": 1, "57780": 1, "51778": 1, "800801": 1, "700459": 1 };
+  var OWN_ONLY = { "1010": 1, "12933": 1, "97669": 1, "1219": 1, "57780": 1, "51778": 1, "800801": 1, "700459": 1, "30847": 1 };
   function ownOnly(id) {
     var es = charEarthList(id);
     return es.length > 0 && es.every(function (e) { return !!OWN_ONLY[e]; });
@@ -17381,7 +17409,8 @@
   }
   // The wikis to try for one character, best-suited first.
   function wikisFor(id) {
-    var out = [], seen = {};
+    var out = franchiseWikis(id).slice(), seen = {};
+    out.forEach(function (w) { seen[w.u] = 1; });
     charEarthList(id).forEach(function (e) {
       (EARTH_WIKIS[e] || []).forEach(function (w) { if (!seen[w.u]) { seen[w.u] = 1; out.push(w); } });
     });
@@ -17413,7 +17442,9 @@
 
   // Labels this app has ever used for an auto-fetched image. Anything else is yours.
   var AUTO_LABELS = ["Wikipedia", "MCU", "Film", "Comics", "X-Men", "Animated", "Spider-Man", "Blade Wiki", "Hulk Wiki",
-                     "MCU Wiki", "Marvel Movies Wiki", "Marvel Database"];
+                     "MCU Wiki", "Marvel Movies Wiki", "Marvel Database",
+                     "Marvel vs. Capcom Wiki", "Capcom Database", "Street Fighter Wiki", "Darkstalkopedia",
+                     "Mega Man Knowledge Base", "Resident Evil Wiki", "Devil May Cry Wiki"];
   function isAuto(entry) {
     var l = entry && (Array.isArray(entry) ? entry[1] : entry.l);
     return AUTO_LABELS.indexOf(l) !== -1;
@@ -17439,7 +17470,9 @@
     { re: /^Marvel's Avengers$/i, n: "Marvel's Avengers Wiki", u: "https://marvels-avengers.fandom.com" },
     { re: /^Marvel's (Spider-Man|Wolverine)/i, n: "Marvel's Spider-Man Wiki", u: "https://marvels-spider-man.fandom.com" },
     { re: /Avengers Academy/i, n: "Avengers Academy Wiki", u: "https://avengers-academy.fandom.com" },
-    { re: /Tsum Tsum/i, n: "Marvel Tsum Tsum Wiki", u: "https://marveltsumtsumgame.fandom.com" }
+    { re: /Tsum Tsum/i, n: "Marvel Tsum Tsum Wiki", u: "https://marveltsumtsumgame.fandom.com" },
+    { re: /Marvel vs\. Capcom|vs\. Street Fighter|^X-Men: Children of the Atom$|^Marvel Super Heroes \(1995 game\)$/, n: "Marvel vs. Capcom Wiki", u: "https://marvelvscapcom.fandom.com" },
+    { re: /Marvel vs\. Capcom|vs\. Street Fighter|^X-Men: Children of the Atom$|^Marvel Super Heroes \(1995 game\)$/, n: "Capcom Database", u: "https://capcom.fandom.com" }
   ];
   async function fetchGamePics() {
     var btn = document.getElementById("gfetchbtn"), msg = function (t, ok) { flash("portmsg", t, ok); };
@@ -17639,6 +17672,11 @@
      as "Spider-Man" and return whichever one the wiki considers canonical. These
      terms pin each version to its own pages. */
   var SEARCH_TERMS = {
+    kenmasters: ["Ken Masters", "Ken"], charlie_sf: ["Charlie Nash", "Charlie"], shadow_sf: ["Shadow", "Charlie Nash"],
+    danhibiki: ["Dan Hibiki", "Dan"], cammy_sf: ["Cammy White", "Cammy"], saki_q: ["Saki Omokane", "Saki"],
+    lou_capcom: ["Lou"], roll_mm: ["Roll"], zero_mmx: ["Zero"], sigma_mmx: ["Sigma"], hayato_sf: ["Hayato Kanzaki", "Hayato"],
+    darksakura: ["Dark Sakura"], cyberakuma: ["Cyber-Akuma", "Mech-Gouki"], akuma_sf: ["Akuma"], mbison_sf: ["M. Bison"],
+    anita_ds: ["Anita"], bbhood_ds: ["B.B. Hood", "Bulleta"], hsienko_ds: ["Hsien-Ko"], abyss_mvc2: ["Abyss"],
     "loc:xmansion": ["X-Mansion", "Xavier Institute", "Xavier's School for Gifted Youngsters"],
     "loc:avtower": ["Avengers Tower", "Stark Tower"],
     "loc:avcompound": ["Avengers Compound", "New Avengers Facility"],
@@ -19402,7 +19440,8 @@
   }
   function wikisForEarth(id, OE) {
     if (!OE) return wikisFor(id);
-    var out = (EARTH_WIKIS[OE] || []).concat(gameEarthWikis(OE));
+    var out = (OE === "30847" ? franchiseWikis(id) : []).concat(EARTH_WIKIS[OE] || [], gameEarthWikis(OE))
+      .filter(function (w, i, a) { return a.findIndex(function (y) { return y.u === w.u; }) === i; });
     if (!OWN_ONLY[OE]) out = out.concat(WIKIS.filter(function (w) { return w.n !== "MCU" || OE === "616"; }));
     if (OE !== "616" && mdbVariants(id, "x").length) out.push({ n: "Marvel Database", u: "https://marvel.fandom.com", mdb: true });
     return out;
