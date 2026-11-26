@@ -4377,15 +4377,28 @@
       });
     });
     if (!any) return null;
-    return { i: own ? own.i : "", p: p, _tl: 1 };
+    // Timeline keeps only specific events. A line a place repeats word for word (a home, a
+    // routine) is not one, and f.r marks a part as routine by hand. Every entry still gets
+    // at least one event, its first, so nothing it is tagged in goes missing.
+    var cnt = {}, keep = [], byEntry = {};
+    p.forEach(function (x) { var k = (x[3]._loc || id) + "|" + x[2]; cnt[k] = (cnt[k] || 0) + 1; });
+    p.sort(function (a, b) { return a[1] - b[1]; });
+    p.forEach(function (x) {
+      var k = (x[3]._loc || id) + "|" + x[2], t = lbParse(x[0]).t, routine = !!x[3].r || cnt[k] > 1;
+      x._t = t;
+      if (!routine) { keep.push(x); byEntry[t] = 1; }
+    });
+    p.forEach(function (x) { if (!byEntry[x._t]) { byEntry[x._t] = 1; keep.push(x); } });
+    keep.sort(function (a, b) { return a[1] - b[1]; });
+    return { i: own ? own.i : "", p: keep, _tl: 1 };
   }
   function lbDate(it) {
     if (it.f && it.f.d) return it.f.d;
     return it.o >= 1000 && it.o < 3000 ? String(Math.floor(it.o + 1e-9)) : "";
   }
-  function locEarths(id) {
+  function locEarths(id, own) {
     var b = {};
-    locTree(id).forEach(function (t) {
+    (own ? [id] : locTree(id)).forEach(function (t) {
       Object.keys(LOC_BIOS[t] || {}).forEach(function (e) {
         var x = b[e] || (b[e] = { p: [] });
         x.p = x.p.concat(LOC_BIOS[t][e].p || []);
@@ -5384,7 +5397,7 @@
   var DEFAULT_PREFS = { fWatch: "all", fOwn: "all", showOwnList: true, showOwnTile: true,
                         openWatch: true, openOwn: false, ownSeedV: 0, listV: 0, epKeyV: 0, smuOrderV: 0, sssIntroV: 0, charMergeV: 0, whatIfV: 0, mgOrderV: 0, pbyOpen: false, slotFilmV: 0, kwannonV: 0, emmaV: 0, earthSlotV: 0, extCutV: 0, tsSplitV: 0, eSort: "line",
                         hideR: [], hideM: [], rChipsOpen: false, fMode: {}, openChips: false, openEps: [], fChar: "",
-                        cMed: "all", cReal: "all", fOrg: "", fObj: "", fLoc: "", xSort: "line", lSort: "line", lmEarths: null, cSort: "az", cNew: false, oSort: "az", castView: "reel", cScope: "this", layout: "", countBy: "entry", trophies: null, arcs: null, loveTop: null, noOther: false, noGames: false, gamesMarV: 0, views: [], view: "" };
+                        cMed: "all", cReal: "all", fOrg: "", fObj: "", fLoc: "", xSort: "line", lSort: "line", lmEarths: null, cSort: "az", cNew: false, oSort: "az", castView: "reel", locHist: "timeline", cScope: "this", layout: "", countBy: "entry", trophies: null, arcs: null, loveTop: null, noOther: false, noGames: false, gamesMarV: 0, views: [], view: "" };
   var state = { lists: [], checks: {}, covers: {}, owned: {}, portraits: {}, slots: {}, deleted: {}, log: {}, prefs: null, current: null,
                 bioSeen: {}, bioFrom: Date.now() };
   var mode = "memory";
@@ -10387,7 +10400,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/948/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/949/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -12990,9 +13003,10 @@
     var view = document.getElementById("locsview");
     var keepScroll = view && LOC_TAB && LOC_TAB.id === id ? view.scrollTop : 0;
     var key = "loc:" + id, imgs = charImgs(key), apps = locAppearances(id, true), L = LOCS[id] || {};
-    var tabs = locEarths(id);
+    var lhist = state.prefs.locHist === "list" ? "list" : "timeline";
+    var tabs = locEarths(id, lhist === "list");
     var e0 = LOC_TAB && LOC_TAB.id === id && tabs.indexOf(LOC_TAB.e) !== -1 ? LOC_TAB.e : tabs[0];
-    var bio = e0 ? locBioDeep(id, e0) : null;
+    var bio = !e0 ? null : lhist === "list" ? (LOC_BIOS[id] || {})[e0] : locBioDeep(id, e0);
     document.getElementById("locspos").textContent = "";
     var h = '<div class="cnav"><button class="gear" id="lback">&larr; All locations</button>';
     h += '<button class="gear" id="lfilter">Filter list &rarr;</button></div>';
@@ -13040,7 +13054,16 @@
       h += '<div class="lone">' + esc(earthName(tabs[0])) + (earthShort(tabs[0]) ? " · " + esc(earthShort(tabs[0])) : "") + "</div>";
     }
     var hasPs = bio && (bio.p || []).length;
+    h += '<div class="dhead casthead"><span>History</span>'
+       + '<span class="cvtog" role="group" aria-label="History layout">'
+       + '<button class="cvbtn' + (lhist === "timeline" ? " on" : "") + '" data-lochist="timeline" title="Dated events, including the places inside it">'
+       + '<span class="cvicon">\u2502</span> Timeline</button>'
+       + '<button class="cvbtn' + (lhist === "list" ? " on" : "") + '" data-lochist="list" title="This place\u2019s own history, part by part">'
+       + '<span class="cvicon">\u2630</span> List</button></span></div>';
     h += '<div class="lbbox">' + (bio ? lbBioHTML(bio) : '<p class="cbio dnone">No history written yet.</p>') + "</div>";
+    if (lhist === "list" && bio && !hasPs && locKids(id).length) {
+      h += '<p class="note">Its story is told through the places inside it, below.</p>';
+    }
     var arc = locArc(id), nxt = locFirstUnwatched(id);
     h += '<div class="arcwrap"><div class="arcline">'
        + '<span class="arcpct">' + arc.pct + "% of its story</span>"
@@ -13111,6 +13134,15 @@
       document.getElementById("locsview").classList.remove("open");
       locView = null;
       render();
+    });
+    body.querySelectorAll("[data-lochist]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        var v = b.getAttribute("data-lochist");
+        if ((state.prefs.locHist || "timeline") === v) return;
+        state.prefs.locHist = v;   // one choice for every place, remembered
+        renderLocs();
+        await save();
+      });
     });
     body.querySelectorAll("[data-ltab]").forEach(function (b) {
       b.addEventListener("click", function () {
