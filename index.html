@@ -319,7 +319,8 @@
   .mlmus[hidden] { display: none; }
   body > .mlmus { display: none; }      /* parked while the Tiles page is redrawn */
   .mlmusbody { background: var(--panel); border-top: 1px solid var(--edge); padding-bottom: env(safe-area-inset-bottom); }
-  .mlmusframe { height: 80px; }
+  .mlmusframe { height: 80px; position: relative; overflow: hidden; }
+  .mlmusslot.pre { position: absolute; left: -9999px; top: 0; width: 360px; height: 80px; }
   .mlmusframe iframe { display: block; width: 100%; border: 0; }
   .mlmus.none .mlmusframe, .mlmus.none .mlmusopts { display: none; }
   .mlmusbar, .mlmusopts { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12.5px; color: var(--dim); }
@@ -6548,10 +6549,10 @@
     var live = !!el.isConnected;
     if (live && parent.moveBefore) { try { parent.moveBefore(el, null); return; } catch (e) {} }
     parent.appendChild(el);
-    if (live && MUS.ctl) { try { if (MUS.ctl.destroy) MUS.ctl.destroy(); } catch (e) {}
-      MUS.ctl = null; MUS.uri = null; MUS.pos = -1;
+    if (live && Object.keys(MUS.pool).length) {   // moved without moveBefore: the frames reloaded, start over
+      musPoolReset(); MUS.pos = -1;
       var h = el.querySelector(".mlmusframe"); if (h) h.innerHTML = '<div id="mlmusframe"></div>';
-      if (MUS.title && themeUri(MUS.title) && !state.prefs.themesOff) { MUS.want = false; musPlay(themeUri(MUS.title)); } }
+      if (MUS.title && themeUri(MUS.title) && !state.prefs.themesOff) { MUS.want = false; MUS.seekTo = null; musPlay(themeUri(MUS.title)); } }
   }
   function musPark() { var el = musEl("mlmus"); if (el && el.parentNode !== document.body) musMove(document.body, el); }
   function musDock() { var el = musEl("mlmus"), f = document.getElementById("focus"); if (el && f) musMove(f, el); }
@@ -6578,7 +6579,7 @@
     try { if (MLSpotify.signedIn()) MLSpotify.account(); else MLSpotify.signIn(); } catch (e) {}
   }
   function musReload() {             // a fresh player, so it picks up the new login
-    try { if (MUS.ctl && MUS.ctl.destroy) MUS.ctl.destroy(); } catch (e) {}
+    musPoolReset();
     MUS.ctl = null; MUS.uri = null;
     var holder = document.querySelector("#mlmus .mlmusframe");
     if (holder) holder.innerHTML = '<div id="mlmusframe"></div>';
@@ -6590,6 +6591,7 @@
     if (changed) musReload();
     else if (MUS.title) musShow(MUS.title, musAuto(MUS.title));
   };
+  setTimeout(function () { try { if (!state.prefs.themesOff) musLoadApi(); } catch (e) {} }, 1500);
   function musLoadApi() {
     if (MUS.api || MUS.loading) return;
     MUS.loading = true;
@@ -6607,35 +6609,79 @@
     musEl("mlmus").classList.toggle("none", !u || !!state.prefs.themesOff);
   }
   function musPause() { try { if (MUS.ctl) MUS.ctl.pause(); } catch (e) {} }
-  function musPlay(uri) {
-    if (!MUS.api) { musLoadApi(); return; }
-    if (!MUS.ctl) {
-      var o0 = { uri: uri, width: "100%", height: 80 };   // no startAt: Spotify would reuse it for every later song
-      MUS.loadingNew = true; musLoadGuard();
-      MUS.api.createController(musEl("mlmusframe"), o0, function (c) {
-        MUS.ctl = c; MUS.uri = uri;
-        c.addListener("ready", function () { if (MUS.want) { try { c.play(); } catch (e) {} } });
-        c.addListener("playback_started", function () { MUS.loadingNew = false; });
-        c.addListener("playback_update", function (e) {
-          var d = (e && e.data) || {};
-          if (MUS.loadingNew) return;      // still the previous song's reports
-          MUS.pos = (d.position || 0) / 1000; MUS.dur = (d.duration || 0) / 1000; MUS.paused = !!d.isPaused;
-          if (MUS.seekTo != null && !d.isPaused && d.duration > 0) {
-            var to = MUS.seekTo; MUS.seekTo = null;
-            if (Math.abs(MUS.pos - to) > 1) { try { c.seek(to); } catch (x) {} }
-          }
-          musOpts();
-        });
+  // ---- player pool: key = song + start point. The current card's player is shown; neighbours load off-screen.
+  MUS.pool = {};
+  function musKey(uri, st) { return uri + "@" + (st || 0); }
+  function musSlot(uri, st) {
+    var key = musKey(uri, st), p = MUS.pool[key];
+    if (p) return p;
+    var box = document.querySelector("#mlmus .mlmusframe");
+    if (!box || !MUS.api) return null;
+    var el = document.createElement("div"); el.className = "mlmusslot pre";
+    var tgt = document.createElement("div"); el.appendChild(tgt); box.appendChild(el);
+    p = MUS.pool[key] = { key: key, uri: uri, st: st || 0, c: null, el: el, ready: false, played: false };
+    var o = { uri: uri, width: "100%", height: 80 };
+    if (st) o.startAt = Math.floor(st);          // safe: this player never loads another song
+    MUS.api.createController(tgt, o, function (c) {
+      p.c = c;
+      if (MUS.act === p) MUS.ctl = c;
+      c.addListener("ready", function () { p.ready = true; if (MUS.act === p && MUS.want) musGo(p); });
+      c.addListener("playback_started", function () { if (MUS.act === p) MUS.loadingNew = false; });
+      c.addListener("playback_update", function (e) {
+        if (MUS.act !== p) return;       // a preloaded or old player
+        var d = (e && e.data) || {};
+        if (MUS.loadingNew) return;
+        MUS.pos = (d.position || 0) / 1000; MUS.dur = (d.duration || 0) / 1000; MUS.paused = !!d.isPaused;
+        if (MUS.seekTo != null && !d.isPaused && d.duration > 0) {
+          var to = MUS.seekTo; MUS.seekTo = null;
+          if (Math.abs(MUS.pos - to) > 1) { try { c.seek(to); } catch (x) {} }   // in case Spotify ignored startAt
+        }
+        musOpts();
       });
+    });
+    return p;
+  }
+  function musGo(p) {          // start the shown player from its start point
+    var c = p.c; if (!c) return;
+    try {
+      if (!p.played) { p.played = true; MUS.loadingNew = true; musLoadGuard(); MUS.seekTo = p.st || null; c.play(); }
+      else if (p.st) { MUS.seekTo = null; c.seek(p.st); c.resume(); }
+      else { MUS.seekTo = null; if (c.playFromStart) c.playFromStart(); else { c.seek(0); c.resume(); } }
+    } catch (e) {}
+  }
+  function musActivate(uri, st) {
+    var p = musSlot(uri, st);
+    if (!p) return;
+    if (MUS.act === p) {                         // same song and start (e.g. the next episode): keep it going
+      if (MUS.want && p.ready && MUS.paused !== false) musGo(p);
       return;
     }
-    if (MUS.uri !== uri) {
-      MUS.uri = uri; MUS.pos = -1; MUS.loadingNew = true; musLoadGuard();
-      MUS.ctl.loadUri(uri, false, MUS.seekTo ? Math.floor(MUS.seekTo) : 0);
-    }
-    setTimeout(function () {   // only nudge it if the new song isn't already playing
-      if (MUS.want && (MUS.loadingNew || MUS.paused !== false)) { try { MUS.ctl.play(); } catch (e) {} }
-    }, 700);
+    if (MUS.act && MUS.act.c) { try { MUS.act.c.pause(); } catch (e) {} }
+    Object.keys(MUS.pool).forEach(function (k) { MUS.pool[k].el.classList.toggle("pre", MUS.pool[k] !== p); });
+    MUS.act = p; MUS.ctl = p.c; MUS.uri = uri; MUS.pos = -1; MUS.paused = true;
+    if (MUS.want && p.ready) musGo(p);           // not ready yet: its "ready" listener starts it
+  }
+  // keep the current card's player and the given neighbours; drop the rest
+  function musPrefetch(titles) {
+    if (!MUS.api || state.prefs.themesOff) return;
+    var keep = {}; if (MUS.act) keep[MUS.act.key] = 1;
+    (titles || []).forEach(function (t) {
+      var u = t && themeUri(t); if (!u) return;
+      var st = musAuto(t) ? musStart(t) : 0;
+      keep[musKey(u, st)] = 1; musSlot(u, st);
+    });
+    Object.keys(MUS.pool).forEach(function (k) { if (!keep[k]) musDrop(k); });
+  }
+  function musDrop(k) {
+    var p = MUS.pool[k]; if (!p) return;
+    try { if (p.c && p.c.destroy) p.c.destroy(); } catch (e) {}
+    if (p.el && p.el.parentNode) p.el.parentNode.removeChild(p.el);
+    delete MUS.pool[k]; if (MUS.act === p) { MUS.act = null; MUS.ctl = null; MUS.uri = null; }
+  }
+  function musPoolReset() { Object.keys(MUS.pool).forEach(musDrop); }
+  function musPlay(uri) {
+    if (!MUS.api) { musLoadApi(); return; }
+    musActivate(uri, MUS.want ? (MUS.seekTo || 0) : 0);
   }
   // called whenever the Tiles card changes; play: start it (the card came from a tap or swipe)
   function musShow(title, play) {
@@ -6649,7 +6695,6 @@
     MUS.want = !!(u && !state.prefs.themesOff && play !== false);
     MUS.seekTo = MUS.want && musStart(title) ? musStart(title) : null;
     if (!u || state.prefs.themesOff) { musPause(); return; }
-    if (MUS.uri === u && MUS.ctl) { if (MUS.want) { try { MUS.ctl.resume ? MUS.ctl.resume() : MUS.ctl.play(); } catch (e) {} } return; }
     musPlay(u);
   }
   function musHide() { MUS.want = false; MUS.seekTo = null; musPause(); var b = musEl("mlmus"); if (b) b.hidden = true; musPad(); }
@@ -7396,6 +7441,7 @@
     var w = document.querySelector("#focus .fwrap");
     if (!w) { focusIdx = next; renderFocus(); return; }
     sliding = true;
+    try { var nk = (vis[next] || {}).key; if (nk && nk !== MUS.title) musShow(nk, musAuto(nk)); } catch (e) {}
     var out = dir > 0 ? -1 : 1;
     w.style.transition = "transform .16s ease-in, opacity .16s ease-in";
     w.style.transform = "translateX(" + (out * 60) + "%)";
@@ -7426,6 +7472,8 @@
       var mk = (vis[focusIdx] || {}).key || null;
       if (document.getElementById("focus").classList.contains("open") && mk !== MUS.title) musShow(mk, musAuto(mk));
       else if (mk === MUS.title) musLabel();
+      if (document.getElementById("focus").classList.contains("open"))
+        setTimeout(function () { musPrefetch([(vis[focusIdx - 1] || {}).key, (vis[focusIdx + 1] || {}).key]); }, 300);
     } catch (e) {}
     if (!vis.length) {
       document.getElementById("fpos").textContent = "";
@@ -11206,7 +11254,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/993/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/994/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
