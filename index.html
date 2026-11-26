@@ -5446,7 +5446,7 @@
   var DEFAULT_PREFS = { fWatch: "all", fOwn: "all", showOwnList: true, showOwnTile: true,
                         openWatch: true, openOwn: false, ownSeedV: 0, listV: 0, epKeyV: 0, smuOrderV: 0, sssIntroV: 0, charMergeV: 0, whatIfV: 0, mgOrderV: 0, pbyOpen: false, slotFilmV: 0, kwannonV: 0, emmaV: 0, earthSlotV: 0, extCutV: 0, tsSplitV: 0, eSort: "line",
                         hideR: [], hideM: [], rChipsOpen: false, fMode: {}, openChips: false, openEps: [], fChar: "",
-                        cMed: "all", cReal: "all", fOrg: "", fObj: "", fLoc: "", xSort: "line", lSort: "line", lmEarths: null, cSort: "az", cNew: false, oSort: "az", castView: "reel", cScope: "this", layout: "", countBy: "entry", trophies: null, arcs: null, loveTop: null, noOther: false, noGames: false, gamesMarV: 0, views: [], view: "", themes: null, themesOff: false, musMini: false, themeAuto: null, themeStart: null };
+                        cMed: "all", cReal: "all", fOrg: "", fObj: "", fLoc: "", xSort: "line", lSort: "line", lmEarths: null, cSort: "az", cNew: false, oSort: "az", castView: "reel", cScope: "this", layout: "", countBy: "entry", trophies: null, arcs: null, loveTop: null, noOther: false, noGames: false, gamesMarV: 0, views: [], view: "", themes: null, themesOff: false, musMini: false, themeAuto: null, themeStart: null, themeAutoAll: false };
   var state = { lists: [], checks: {}, covers: {}, owned: {}, portraits: {}, slots: {}, deleted: {}, log: {}, prefs: null, current: null,
                 bioSeen: {}, bioFrom: Date.now() };
   var mode = "memory";
@@ -6318,7 +6318,130 @@
     "Guardians of the Galaxy": "spotify:track:1BTAOQ5YsnDNlxd0glti4s",
     "Spider-Man": "spotify:track:42IvX2p3IRzSwXuZgr5cLG",
     "Spider-Man: Homecoming": "spotify:album:3Aao9FYpxQXuNrAPjJnud1",
-    "Into the Spider-Verse": "spotify:track:5zsHmE2gO3RefVsPyw2e3T"
+    "Into the Spider-Verse": "spotify:track:5zsHmE2gO3RefVsPyw2e3T",
+    "Iron Man 2": "spotify:track:6ygcEwkHbFhoWP09e76gRT",
+    "The Incredible Hulk": "spotify:track:5DNsT9MZifnPgW0RAUSJgb",
+    "Thor": "spotify:track:6drFe1jjpqkNECP4M2eQtk",
+    "Thor: The Dark World": "spotify:track:5rQmuNRjKT6t33JlNJbc6I",
+    "Iron Man 3": "spotify:track:7u5XBHnht6dyoRXRBb5soK",
+    "Captain America: The Winter Soldier": "spotify:track:2ZQ4lypCihgYLjIdvLRqyW",
+    "Guardians of the Galaxy Vol. 2": "spotify:track:35RaFNWvYLgutIP2sO8axR",
+    "Avengers: Age of Ultron": "spotify:track:1Gr42a4vVKYW4hTgPjklvh",
+    "Ant-Man": "spotify:track:6yNPVGljyzMYTxEhL6fLBg",
+    "Captain America: Civil War": "spotify:track:5UUZRLyBE80HsJWmnLM7A4",
+    "Black Widow": "spotify:track:7DXVDRuzfxi6Qoo1hH0G0I",
+    "Thor: Ragnarok": "spotify:track:4Jm9RwZ2C46J06ARRllUs5",
+    "Ant-Man and the Wasp": "spotify:track:4CfZ8PFdTzGSdqiictXvj7",
+    "Avengers: Infinity War": "spotify:track:51Amo7fyI2jL3sf2UgX75i",
+    "Captain Marvel": "spotify:track:4CQ8uwWfH9hDCbwj4PUs58",
+    "WandaVision": "spotify:track:2lD3POsCEgFZGH5F2cT46Y",
+    "Shang-Chi and the Legend of the Ten Rings": "spotify:track:0U1X5zc0wvbT6C3YQEpK0q",
+    "The Falcon and the Winter Soldier": "spotify:track:0YRJeq6AvbjquIwj3ClOoq",
+    "Spider-Man: Far From Home": "spotify:track:2Y9v6F9vFK9Z8KAoFwAj9Z",
+    "Spider-Man: No Way Home (The More Fun Stuff Version)": "spotify:track:0NkPI5RS4ECeAsRBOKBtQV",
+    "Eternals": "spotify:track:2IMCpvfw7vdBgK054H0FPE",
+    "Doctor Strange in the Multiverse of Madness": "spotify:track:459fuGnqyCTz87R9zWIXH2",
+    "Hawkeye": "spotify:track:31YHdtc3RN5X8JYIaNm1Lp",
+    "Moon Knight": "spotify:track:65ICJM6KqFWou1ntTAv0Qk",
+    "Echo": "spotify:track:7MNFjEqc7G4kjskQSz7Bxn",
+    "She-Hulk: Attorney at Law": "spotify:track:3hE8eEGm3lnwCb5rlodRan",
+    "Ms. Marvel": "spotify:track:10asHQuP1kwP5GKRMIOkUu",
+    "Thor: Love and Thunder": "spotify:track:6GpIulgg8ANZx7AG4H4Hj1",
+    "Ironheart": "spotify:track:3weREo6myqokCWGD5ON5Uj",
+    "Werewolf by Night": "spotify:track:1MmTr1ahz7VuHhsCKYONz4",
+    "Ant-Man and the Wasp: Quantumania": "spotify:track:2BAlPE15dKMXpB5Trutcak",
+    "Guardians of the Galaxy Vol. 3": "spotify:track:5KvInYCptTtDvR9iWFael8",
+    "Secret Invasion": "spotify:track:4gHjSmpB60BlvC49NXbT0m",
+    "The Marvels": "spotify:track:6zeajjTRw6Iqgu65xjju4Y",
+    "Loki \u2014 Season 1": "spotify:track:5T7DUEeAj0hkMLTzIlDCRz",
+    "Loki \u2014 Season 2": "spotify:track:14ttivyM8Dj0xichnst1Vd",
+    "What If\u2026? \u2014 Season 1": "spotify:track:1iXxR60s5eXPfJ91lgyVp1",
+    "What If\u2026? \u2014 Season 2": "spotify:track:1iXxR60s5eXPfJ91lgyVp1",
+    "What If\u2026? \u2014 Season 3": "spotify:track:1iXxR60s5eXPfJ91lgyVp1",
+    "Deadpool & Wolverine \u2014 TemPad reaches sideways into Branch B-Logan": "spotify:track:5m14N7UR6nG69ccaQ0Qssa",
+    "Agatha All Along": "spotify:track:6CFQUEanwUiBxW5rfsh590",
+    "Daredevil: Born Again \u2014 Season 1": "spotify:track:4mXdThZ9JooNvF4vztdLtN",
+    "Daredevil: Born Again \u2014 Season 2": "spotify:track:2G1fZX0CNVMiGhgUs2QqeC",
+    "The Punisher: One Last Kill": "spotify:track:0FloDfbM8ifR0uARY24gNL",
+    "Captain America: Brave New World": "spotify:track:4OjupcAoeFegWCGtFVywdn",
+    "Thunderbolts*": "spotify:track:5OXtqgjZzi1Kj9EJlg45t2",
+    "The Fantastic Four: First Steps (alt-Earth)": "spotify:track:7h1r6c5C8HZpDmmCodIIW4",
+    "Wonder Man": "spotify:track:5qzw4NFMzx63iixVbdYw6M",
+    "VisionQuest": "spotify:track:7pbCqbLqPi2zMXpcEV0Gr2",
+    "Spider-Man: Brand New Day (Extended Re-release)": "spotify:track:2IE9mgjkkk7Lfj9wgzz8MT",
+    "Eyes of Wakanda \u2014 ep.1 (c. 1260 BCE)": "spotify:track:50Z9iOfUjLetR4H6eiX9FI",
+    "Eyes of Wakanda \u2014 ep.2 (c. 1200 BCE)": "spotify:track:50Z9iOfUjLetR4H6eiX9FI",
+    "Eyes of Wakanda \u2014 ep.3 (c. 1400 CE)": "spotify:track:50Z9iOfUjLetR4H6eiX9FI",
+    "Eyes of Wakanda \u2014 ep.4": "spotify:track:50Z9iOfUjLetR4H6eiX9FI",
+    "X-Men '97 \u2014 Season 1": "spotify:track:1jvjHwbJm8yhbivJ03hmgQ",
+    "X-Men '97 \u2014 Season 2": "spotify:track:1jvjHwbJm8yhbivJ03hmgQ",
+    "X-Men '97 \u2014 Season 3 (2027)": "spotify:track:1jvjHwbJm8yhbivJ03hmgQ",
+    "Spider-Man 2.1 (Extended Cut)": "spotify:track:2v3Ezj7MnwBe3s1VRaUcDt",
+    "Spider-Man 3": "spotify:track:7hV7JECIDZyxH434UCP1cU",
+    "Spider-Man 3 (Editor's Cut)": "spotify:track:7hV7JECIDZyxH434UCP1cU",
+    "The Amazing Spider-Man": "spotify:track:45pKftYJKDnAuNYgGHcddL",
+    "X-Men": "spotify:track:1yG2kp8QRonxvo0kPwqpm9",
+    "X2: X-Men United": "spotify:track:3rRVnimOSp80R96q1MO5Au",
+    "X-Men: The Last Stand": "spotify:track:3IMLUWqLxu2BPodkrwWFRC",
+    "X-Men: First Class": "spotify:track:1rWiMhHvRua3jPyKAY43nB",
+    "X-Men: Days of Future Past (The Rogue Cut) \u2014 1973": "spotify:track:6cht5XcHth1nl2JBkrqpgM",
+    "X-Men: Days of Future Past (The Rogue Cut) \u2014 2023": "spotify:track:6cht5XcHth1nl2JBkrqpgM",
+    "Logan (the Westchester Incident, 2028, precedes this film's 2029)": "spotify:track:6cxLeCb31gsTHXeyjWmIIJ",
+    "Fantastic Four (Extended Edition)": "spotify:track:73dAOXmCOjNrzSQRCTksBC",
+    "Fantastic Four: Rise of the Silver Surfer": "spotify:track:0K7u4CVQWyR3SsgaWoie2c",
+    "Fantastic Four (2015, Josh Trank)": "spotify:track:24ekhpSHU66ClhfUbgEy92",
+    "Blade II": "spotify:track:7sVydcenQtKcqVb2kOchnz",
+    "The Incredible Hulk (1978) \u2014 Season 1": "spotify:track:4W5NRUuuhmzlbWycFahXRo",
+    "The Incredible Hulk (1978) \u2014 Season 2": "spotify:track:4W5NRUuuhmzlbWycFahXRo",
+    "The Incredible Hulk (1978) \u2014 Season 3": "spotify:track:4W5NRUuuhmzlbWycFahXRo",
+    "The Incredible Hulk (1978) \u2014 Season 4": "spotify:track:4W5NRUuuhmzlbWycFahXRo",
+    "The Incredible Hulk (1978) \u2014 Season 5": "spotify:track:4W5NRUuuhmzlbWycFahXRo",
+    "The Incredible Hulk (1977 TV movie)": "spotify:track:7C04tHtXeLL8hVik9M2XZg",
+    "The Incredible Hulk: Death in the Family (1977 TV movie)": "spotify:track:7C04tHtXeLL8hVik9M2XZg",
+    "The Incredible Hulk Returns (1988 TV movie \u2014 with Thor)": "spotify:track:7C04tHtXeLL8hVik9M2XZg",
+    "The Trial of the Incredible Hulk (1989 TV movie \u2014 with Daredevil)": "spotify:track:7C04tHtXeLL8hVik9M2XZg",
+    "The Death of the Incredible Hulk (1990 TV movie)": "spotify:track:7C04tHtXeLL8hVik9M2XZg",
+    "The Amazing Spider-Man 2": "spotify:track:7D42jUGCSe0BhIco9Pb7TB",
+    "Venom": "spotify:track:4rcSD83nKZwEj5BiNi8zxv",
+    "Venom: Let There Be Carnage": "spotify:track:6GV6efIORs01x2ul1gwrHt",
+    "Venom: The Last Dance": "spotify:track:7jbnBYC4iTHP7ZiTceJxk1",
+    "Morbius": "spotify:track:2dzyy2KVV0aKeNfZvInF5i",
+    "Madame Web \u2014 prologue": "spotify:track:30h9moqkZ8HXVvova8bdQW",
+    "Madame Web \u2014 main setting": "spotify:track:2N0ETGqBYh4lhDGis8hjQp",
+    "Kraven the Hunter": "spotify:track:2AbrtlpVbA77CcZj3U6vRQ",
+    "Blade": "spotify:track:3pBRx4s7hgP7lJvzlwivHC",
+    "Blade: Trinity (Unrated Extended Cut)": "spotify:track:2c4ZbhfJGKL3kvyW64wTJW",
+    "Deadpool": "spotify:track:2Y8FQUUdf7l9BAIfJCwX2F",
+    "Deadpool 2 (Super Duper Cut) \u2014 Cable's meddling, Essex fallout splits the branch here": "spotify:track:62LSie1gXDUdmenl3WqWoA",
+    "X-Men Origins: Wolverine \u2014 opening & war montage": "spotify:track:61Xeu7zX3IJWsLDkVltdiC",
+    "X-Men Origins: Wolverine \u2014 Pearl Harbor / Nagasaki sequence": "spotify:track:61Xeu7zX3IJWsLDkVltdiC",
+    "X-Men Origins: Wolverine \u2014 Team X montage": "spotify:track:61Xeu7zX3IJWsLDkVltdiC",
+    "X-Men Origins: Wolverine \u2014 present-day climax": "spotify:track:61Xeu7zX3IJWsLDkVltdiC",
+    "The Wolverine (Unleashed Extended Edition) \u2014 Nagasaki cold open": "spotify:track:5Rv3eovCwHRpFRQcLQx9jK",
+    "The Wolverine (Unleashed Extended Edition) \u2014 present day": "spotify:track:3kqodLR3SGgtcvO0ZAlebS",
+    "X-Men: Apocalypse": "spotify:track:1QwgeQoYacrRwOSWfV5b1V",
+    "Dark Phoenix": "spotify:track:5bhfauYIvnIlqsygbVJgEf",
+    "Daredevil (Director's Cut)": "spotify:track:1oBdiphwoBdzhzAEzgBwmN",
+    "Elektra (Director's Cut)": "spotify:track:7fVtcO4RzoUbnlPQ3wz5WP",
+    "Hulk (2003, Ang Lee)": "spotify:track:7fXEtTq5fkU06V188m1DUh",
+    "The Spectacular Spider-Man \u2014 Season 1": "spotify:track:0qCWCCn0Jk6MGFKgsp9CX0",
+    "The Spectacular Spider-Man \u2014 Season 2": "spotify:track:0qCWCCn0Jk6MGFKgsp9CX0",
+    "Men in Black": "spotify:track:13U7h9mUA6R4mdqOrGay3K",
+    "Men in Black 3": "spotify:track:62ttPHojaFZnqe5QIPeLB2",
+    "Men in Black: International": "spotify:track:2dOlk28UADK2uwvt7dnxk0",
+    "Big Hero 6": "spotify:track:3c1ItvzDDDpmDgLH9SIUp4",
+    "Spidey and His Amazing Friends \u2014 Season 1": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Spidey and His Amazing Friends \u2014 Season 2": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Spidey and His Amazing Friends \u2014 Season 3": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Spidey and His Amazing Friends \u2014 Season 4": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Spidey and His Amazing Friends \u2014 Season 5": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Spidey and His Amazing Friends \u2014 Season 6 (2027)": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Spidey and His Amazing Friends \u2014 Season 7 (2028)": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Meet Spidey and His Amazing Friends \u2014 Season 1": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Meet Spidey and His Amazing Friends \u2014 Season 2": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Meet Spidey and His Amazing Friends \u2014 Season 3": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Meet Spidey and His Amazing Friends \u2014 Season 4": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Meet Spidey and His Amazing Friends \u2014 Season 5": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5"
   };
   function themeUri(t) {
     var own = (state.prefs.themes || {})[t];
@@ -6355,7 +6478,7 @@
       if (a === "auto") {
         var t0 = MUS.title; if (!t0) return;
         state.prefs.themeAuto = state.prefs.themeAuto || {};
-        if (musAuto(t0)) delete state.prefs.themeAuto[t0]; else state.prefs.themeAuto[t0] = true;
+        state.prefs.themeAuto[t0] = !musAuto(t0);
         save(); musOpts(); return;
       }
       if (a === "here") {
@@ -6392,7 +6515,17 @@
     musEl("mlmusin").addEventListener("input", function () { this.setCustomValidity(""); });
     musAcct();
   }
-  function musAuto(t) { return !!(t && (state.prefs.themeAuto || {})[t]); }
+  function musAuto(t) {
+    if (!t) return false;
+    var own = (state.prefs.themeAuto || {})[t];
+    return own === true || own === false ? own : !!state.prefs.themeAutoAll;
+  }
+  // master switch in List view: every entry follows it; per-entry exceptions are cleared. Start points (themeStart) stay.
+  function musAutoAll(on) { state.prefs.themeAutoAll = !!on; state.prefs.themeAuto = {}; }
+  function musAutoMixed() {
+    var a = state.prefs.themeAuto || {}, m = !!state.prefs.themeAutoAll;
+    return Object.keys(a).some(function (k) { return (a[k] === true || a[k] === false) && a[k] !== m && themeUri(k); });
+  }
   function musStart(t) { var v = t && (state.prefs.themeStart || {})[t]; return v > 0 ? v : 0; }
   function musTime(x) { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ":" + ("0" + x % 60).slice(-2); }
   function musOpts() {
@@ -8376,6 +8509,7 @@
     h += '<div class="ftoggles">';
     h += '<label><input type="checkbox" id="showlist"' + (p.showOwnList ? " checked" : "") + "> Show ownership in list</label>";
     h += '<label><input type="checkbox" id="showtile"' + (p.showOwnTile ? " checked" : "") + "> Show ownership in tiles</label>";
+    h += '<label title="Some entries are set differently in Tiles view"><input type="checkbox" id="autoall"' + (p.themeAutoAll ? " checked" : "") + "> Autoplay theme songs (every entry)</label>";
     h += "</div>";
     if (n) h += '<button class="mini" id="clearfilters">Clear all filters</button>';
     h += viewBarHTML();
@@ -11061,7 +11195,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/988/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/991/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -17339,6 +17473,11 @@
     document.getElementById("showtile").addEventListener("change", async function (e) {
       state.prefs.showOwnTile = e.target.checked; await save(); render();
     });
+    var aa = document.getElementById("autoall");
+    if (aa) {
+      aa.indeterminate = musAutoMixed();
+      aa.addEventListener("change", async function (e) { musAutoAll(e.target.checked); e.target.indeterminate = false; await save(); musOpts(); });
+    }
 
     document.getElementById("reset").addEventListener("click", async function () {
       var l = curList();
