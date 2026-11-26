@@ -1344,6 +1344,7 @@
                              grid-template-rows: repeat(19, auto) 1fr; column-gap: 44px; align-items: start;
                              align-content: start; justify-content: stretch; }
   html.desk #focus .fwrap > * { grid-column: 2; max-width: 760px; width: 100%; }
+  #fcover { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   html.desk #focus .fwrap > #fcover { grid-column: 1; grid-row: 1 / span 20; max-width: 380px; position: sticky; top: 0; }
   html.desk #focus .fmeta { text-align: left; margin-top: 0; }
   html.desk #focus .ftitle { font-size: 28px; }
@@ -6446,7 +6447,41 @@
     "Meet Spidey and His Amazing Friends \u2014 Season 2": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
     "Meet Spidey and His Amazing Friends \u2014 Season 3": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
     "Meet Spidey and His Amazing Friends \u2014 Season 4": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
-    "Meet Spidey and His Amazing Friends \u2014 Season 5": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5"
+    "Meet Spidey and His Amazing Friends \u2014 Season 5": "spotify:track:6Z9oWsUnoGXYy6ErIuhnO5",
+    "Daredevil \u2014 Season 1": "spotify:track:543qs9ugnC50ErLNXONLNz",
+    "Jessica Jones \u2014 Season 1": "spotify:track:3CyFYCjPynnKTstb7EY0fT",
+    "Luke Cage \u2014 Season 1": "spotify:track:0ldqqFB8HUQCxuAhGIwlQG",
+    "Iron Fist \u2014 Season 1": "spotify:track:5fwwIBebYWFriw4iamcsyj",
+    "The Defenders": "spotify:track:309NAVrEILfvMgcdlfFyiX",
+    "The Punisher \u2014 Season 1": "spotify:track:0rSJtqCSAkhKORRpJlk7pL",
+    "Agents of S.H.I.E.L.D. \u2014 S1, eps 1\u20137": "spotify:track:7g5H7rvDNnb6VAaLxjCgW5",
+    "Agent Carter \u2014 Season 1": "spotify:track:1l6M9srfGNwFnHXUmIAQTM",
+    "Legion \u2014 Season 1": "spotify:track:6KZzpvizCPLajjcmpgkViG",
+    "Runaways \u2014 Season 1": "spotify:track:3zZLRFQoYEN8nUqh53Sw0i",
+    "Cloak & Dagger \u2014 Season 1": "spotify:track:2HACYL5wx8HIxsDm4r7cO9",
+    "I Am Groot \u2014 Season 1": "spotify:track:4kgNOt0IotYaPJIFdfV1hW",
+    "Hit-Monkey \u2014 Season 1": "spotify:track:6xm1kHZtGgqeIbGhMqcI5M",
+    "Moon Girl and Devil Dinosaur \u2014 Season 1": "spotify:track:0NGrSDR9MkSuBlhJOJbv38",
+    "Your Friendly Neighborhood Spider-Man": "spotify:track:5MPsbsazRK8tAfBjbeLslD",
+    "Across the Spider-Verse": "spotify:track:5pv6Z4veEqPwAwU8IKhasj",
+    "Ghost Rider (Extended Cut)": "spotify:track:1BqereBDISqaHihiakW8RJ",
+    "Ghost Rider: Spirit of Vengeance": "spotify:track:72ze2Hah4g3i7EVuutXstV",
+    "Kick-Ass": "spotify:track:7AnQY61VBpeIHIlLIHBjuK",
+    "Guardians of the Galaxy Holiday Special": "spotify:track:7AD4sAsJJQm0Bog0zhwYrf",
+    "One-Shot: Agent Carter": "spotify:track:1l6M9srfGNwFnHXUmIAQTM",
+    "One-Shot: A Funny Thing Happened on the Way to Thor's Hammer": "spotify:track:6drFe1jjpqkNECP4M2eQtk",
+    "One-Shot: All Hail the King": "spotify:track:7u5XBHnht6dyoRXRBb5soK",
+    "One-Shot: Item 47": "spotify:track:5SXsXjVJCWeJuf7FHvgBYR",
+    "One-Shot: The Consultant": "spotify:track:5DNsT9MZifnPgW0RAUSJgb",
+    "Howard the Duck": "spotify:track:6mUZTNTEMZ8S2EkenXaHC6",
+    "M.O.D.O.K.": "spotify:track:62XfdLG6heSstbB0dRRbju",
+    "Spider-Noir (Nicolas Cage series)": "spotify:track:6AQlpkDOuWLUnXWt78P3Uh",
+    "Kingsman: The Golden Circle": "spotify:track:39tSblJOEXBhzMGQe8nFOY",
+    "The King's Man": "spotify:track:7c83RE46yaPpADloOKnpJr",
+    "Iron Man and His Awesome Friends \u2014 Season 1": "spotify:track:7HlyhsEHiwqHuyQzR5u1Bl",
+    "Marvel Rising: Secret Warriors": "spotify:track:5C1PksOQ542mrdjr3BX86P",
+    "Baymax!": "spotify:track:5f3FwyyiZ1UPXNPVwJY2VN",
+    "Punisher: War Zone": "spotify:track:7xUndQqAcAOfBVCoZD4uOX"
   };
   // entries that aren't seasons but share a show's theme (one continuous theme while swiping through them)
   var MUS_GROUPS = {
@@ -6454,7 +6489,28 @@
     "The Incredible Hulk: Death in the Family (1977 TV movie)": "show:The Incredible Hulk (1978)",
     "The Incredible Hulk Returns (1988 TV movie \u2014 with Thor)": "show:The Incredible Hulk (1978)",
     "The Trial of the Incredible Hulk (1989 TV movie \u2014 with Daredevil)": "show:The Incredible Hulk (1978)",
-    "The Death of the Incredible Hulk (1990 TV movie)": "show:The Incredible Hulk (1978)"
+    "The Death of the Incredible Hulk (1990 TV movie)": "show:The Incredible Hulk (1978)",
+    "Agents of S.H.I.E.L.D.: Slingshot": "show:Agents of S.H.I.E.L.D.",
+    "Iron Man 3": "grp:Iron Man 3",
+    "Iron Man 3 \u2014 Chinese version extra scenes": "grp:Iron Man 3",
+    "X-Men: The Animated Series \u2014 Season 1": "show:X-Men '97",
+    "X-Men: The Animated Series \u2014 Season 2": "show:X-Men '97",
+    "X-Men: The Animated Series \u2014 Season 3": "show:X-Men '97",
+    "X-Men: The Animated Series \u2014 Season 4": "show:X-Men '97",
+    "X-Men: The Animated Series \u2014 Season 5": "show:X-Men '97",
+    "Spidey and Iron Man: Avengers Team-Up!": "show:Spidey and His Amazing Friends",
+    "Spidey and the Avengers: Halloween Team-Up!": "show:Spidey and His Amazing Friends",
+    "Meet Iron Man and His Awesome Friends": "show:Iron Man and His Awesome Friends",
+    "Baymax Dreams": "grp:Baymax",
+    "Baymax!": "grp:Baymax",
+    "Baymax & Mochi": "grp:Baymax",
+    "Marvel Rising: Secret Warriors": "grp:Marvel Rising",
+    "Marvel Rising: Initiation": "grp:Marvel Rising",
+    "Marvel Rising: Chasing Ghosts": "grp:Marvel Rising",
+    "Marvel Rising: Heart of Iron": "grp:Marvel Rising",
+    "Marvel Rising: Battle of the Bands": "grp:Marvel Rising",
+    "Marvel Rising: Operation Shuri": "grp:Marvel Rising",
+    "Marvel Rising: Playing with Fire": "grp:Marvel Rising"
   };
   // the show an entry belongs to ("show:Loki"), or null for films and one-off entries
   function musShowKey(t) {
@@ -6915,7 +6971,7 @@
   function detailHTML(title) {
     var d = wholeFilmCredits(title) || {};
     var ch = wholeFilmChars(title);
-    var pbtn = '<button class="mltagbtn mlpbtn" data-mlposter="' + esc(title) + '">\ud83d\uddbc ' + (mediumOf(title) === "game" ? "Find box art" : "Find a poster") + '</button>';
+    var pbtn = "";
     if (!ch.length && !d.cast && !d.dir) return '<div class="dnone">No cast or crew recorded yet.</div>' + pbtn;
     var h = pbtn;
     var fparts = filmParts(title);
@@ -8655,7 +8711,7 @@
        + '<span class="pos" id="fpos"></span>'
        + '<button class="dskarrow" id="fnext" aria-label="Next entry">\u203a</button></span></div>';
     h += '<div class="fwrap">';
-    h += '<div class="cover" id="fcover"></div>';
+    h += '<div class="cover" id="fcover" role="button" tabindex="0" title="Tap to look up a poster"></div>';
     h += '<div class="fmeta"><div class="fera" id="fera"></div>';
     h += '<h2 class="ftitle" id="ftitle"></h2><div class="fdone" id="fdone"></div><div class="fplat" id="fplat"></div></div>';
     h += '<div class="fbtns"><button class="fbtn tog" id="fmark">Watched</button>';
@@ -8667,7 +8723,7 @@
     h += '<div class="dpanel" id="feps"></div>';
     h += '<div class="dpanel" id="fdetail"></div>';
     h += '<div class="fnav"><button id="fprev">&larr; Previous</button><button id="fnext">Next &rarr;</button></div>';
-    h += '<div class="fnav"><button id="fcover-set">Find a poster</button><button id="fcover-clear">Use generated art</button></div>';
+    h += '<div class="fnav"><button id="fcover-clear">Use generated art</button></div>';
     h += '<div class="ftrack"><div id="fbar-fill" style="width:0%"></div></div>';
     var fn = activeFilterCount();
     h += '<div class="filters" style="width:100%;margin-top:14px">';
@@ -11314,7 +11370,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/998/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/1001/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
@@ -17911,10 +17967,14 @@
     });
     document.getElementById("fnext").addEventListener("click", function () { slideTo(1); });
     document.getElementById("fprev").addEventListener("click", function () { slideTo(-1); });
-    document.getElementById("fcover-set").addEventListener("click", async function () {
-      var vis = visibleItems(); var it = vis[focusIdx]; if (!it) return;
-      mlPosterDialog(it.title);
-    });
+    (function () {
+      var fc = document.getElementById("fcover"), p0 = null, moved = false;
+      fc.addEventListener("pointerdown", function (e) { p0 = [e.clientX, e.clientY]; moved = false; });
+      fc.addEventListener("pointermove", function (e) { if (p0 && Math.abs(e.clientX - p0[0]) + Math.abs(e.clientY - p0[1]) > 12) moved = true; });
+      function go() { var vis = visibleItems(); var it = vis[focusIdx]; if (it) mlPosterDialog(it.title); }
+      fc.addEventListener("click", function (e) { if (moved) { moved = false; return; } e.preventDefault(); go(); });
+      fc.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    })();
     document.getElementById("fcover-clear").addEventListener("click", async function () {
       var vis = visibleItems(); var it = vis[focusIdx]; if (!it) return;
       delete state.covers[it.title];
