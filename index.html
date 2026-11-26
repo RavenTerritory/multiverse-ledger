@@ -238,6 +238,14 @@
   .dropt.wrong { border-color: var(--bad); background: #3a2119; }
   .dropt.dim { opacity: .55; }
   .drwhy { font-size: 14.5px; margin: 14px 0 10px; }
+  .drquote { font-size: 16px; font-weight: 400; font-style: italic; color: var(--paper); margin: -6px 0 14px; line-height: 1.45;
+    border-left: 3px solid var(--gold); padding-left: 10px; }
+  .drpic { margin: 0 0 14px; text-align: center; }
+  .drpic img { max-width: 100%; max-height: 300px; border-radius: 10px; border: 1px solid var(--edge); object-fit: contain; }
+  .dropts.drgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .drgrid .dropt { padding: 6px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .drgrid .dropt img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 7px; }
+  .drcap { font-size: 13px; }
   .drwhy.ok b { color: var(--good); } .drwhy.bad b { color: var(--bad); }
   .drnext { display: flex; gap: 8px; flex-wrap: wrap; }
   .drnone { color: var(--dim); font-size: 14px; }
@@ -9158,6 +9166,265 @@
         right + " is in " + u.name + ".", id);
     } }
   ];
+
+  /* ---- helpers for the bio, picture, place and object questions ---- */
+  function drOk(u) { return DR.spoil || lbDone(u); }
+  // a passage without its episode-title opener ("‘Washed Away’: He …" → "He …"), and not too long
+  function drClip(x) {
+    x = String(x || "").replace(/^\s*[‘'"“][^’'"”]{1,80}[’'"”]\s*:\s*/, "").trim();
+    if (x.length > 260) {
+      var cut = x.slice(0, 260), dot = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+      x = dot > 80 ? cut.slice(0, dot + 1) : cut.replace(/\s+\S*$/, "") + "…";
+    }
+    return x;
+  }
+  var DR_GENERIC = /^(the|doctor|dr|mr|mrs|ms|miss|man|woman|girl|boy|captain|agent|king|queen|lord|lady|professor|general|sir|young|old|big|little|iron|black|white|red|green|blue|dark|great|first|second|super|ultimate|mighty|amazing|spider|marvel|new|york|city|team)$/i;
+  function drNameBits(names) {
+    var out = [];
+    names.forEach(function (n) {
+      n = String(n || "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
+      if (!n) return;
+      n.split(/\s*\/\s*/).forEach(function (h) {
+        h = h.trim();
+        if (h.length > 2 && out.indexOf(h) === -1) out.push(h);
+        h.split(/\s+/).forEach(function (w) {
+          w = w.replace(/[^A-Za-z0-9'\-.]/g, "").replace(/'s$/, "");
+          if (w.length > 3 && /^[A-Z]/.test(w) && !DR_GENERIC.test(w) && out.indexOf(w) === -1) out.push(w);
+        });
+      });
+    });
+    return out.sort(function (a, b) { return b.length - a.length; });
+  }
+  function drEsc(x) { return String(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  // the text with every name of its subject blanked; null if a name still shows
+  function drBlank(text, names) {
+    var bits = drNameBits(names), t = String(text || "");
+    bits.forEach(function (b) { t = t.replace(new RegExp("\\b" + drEsc(b) + "(?:'s|’s)?\\b", "gi"), "▢▢▢"); });
+    t = t.replace(/(▢▢▢[\s-]*){2,}/g, "▢▢▢ ");
+    if (bits.some(function (b) { return b.length > 4 && t.toLowerCase().indexOf(b.toLowerCase()) !== -1; })) return null;
+    return t;
+  }
+  function drCharNames(id) {
+    var out = [charName(id)];
+    Object.keys(BIOS[id] || {}).forEach(function (e) { out.push(BIOS[id][e].nm); });
+    Object.keys(VERSION_NAMES[id] || {}).forEach(function (e) { out.push(VERSION_NAMES[id][e]); });
+    return out;
+  }
+  // the label for where a passage comes from: "episode 4 (“Bug in the System”) of X" / "X"
+  function drWhere(u, key) {
+    var x = lbParse(key);
+    if (x.n === null) return u.name;
+    var ep = (epsFor(x.t) || []).filter(function (e) { return e.n === x.n; })[0] || {};
+    return "episode " + (ep.d || x.n) + (ep.t ? " (“" + ep.t + "”)" : "") + " of " + u.name;
+  }
+  // every unlocked bio passage of the unit's characters: { id, e, key, text }
+  function drPassages(u) {
+    var inU = {}, out = [];
+    u.parts.forEach(function (t) { inU[t] = 1; });
+    drChars(u).forEach(function (id) {
+      var b = BIOS[id] || {};
+      Object.keys(b).forEach(function (e) {
+        (b[e].p || []).forEach(function (p) {
+          var x = lbParse(p[0]);
+          if (inU[x.t] && drOk(p[0]) && p[2] && p[2].length > 30) out.push({ id: id, e: e, key: p[0], text: p[2] });
+        });
+      });
+    });
+    return out;
+  }
+  function drRealImg(id, t) {
+    var im = null;
+    try { im = imgForEntry(id, t, null, ""); } catch (e) {}
+    return im && im.u && /^https?:|^data:image/.test(im.u) ? im.u : "";
+  }
+  function drPlaces(u) {
+    var out = [];
+    u.parts.forEach(function (t) { locsOf(t).forEach(function (l) { if (out.indexOf(l) === -1) out.push(l); }); });
+    return out;
+  }
+  function drObjs(u) {
+    var out = [];
+    u.parts.forEach(function (t) { objsOf(t).forEach(function (o) { if (out.indexOf(o) === -1) out.push(o); }); });
+    return out;
+  }
+  function drBare(id) { return String(id).replace(/^(loc|obj):/, ""); }
+  // other characters to offer as wrong answers: the same film or season first, then others you've seen
+  function drOthers(u, us, not) {
+    var a = drChars(u).filter(function (x) { return not.indexOf(x) === -1; });
+    if (a.length < 6) us.forEach(function (u2) { if (u2 !== u) drChars(u2).forEach(function (x) { if (not.indexOf(x) === -1) a.push(x); }); });
+    return drUniq(a);
+  }
+  var DR_MORE = [
+    { w: 5, f: function (us) {   // who is this? (a moment from their bio)
+      var u = drPick(us), ps = drPassages(u);
+      if (!ps.length) return null;
+      var p = drPick(ps), right = drName2(u, p.id);
+      var txt = drBlank(drClip(p.text), drCharNames(p.id));
+      if (!txt) return null;
+      var wr = drShuffle(drOthers(u, us, [p.id])).slice(0, 14).map(function (x) { return drName2(u, x); });
+      return drMake("Who is this, in " + drWhere(u, p.key) + "?\n“" + txt + "”", right, wr,
+        "That’s " + right + ": " + drClip(p.text), p.id);
+    } },
+    { w: 3, f: function (us) {   // who is this? (how their bio introduces them)
+      var u = drPick(us), ids = drChars(u).filter(function (id) {
+        var b = (BIOS[id] || {})[(earthsOf(drPartWith(u, id)) || [])[0]];
+        return b && b.i && b.i.length > 25;
+      });
+      if (!ids.length) return null;
+      var id = drPick(ids), b = BIOS[id][(earthsOf(drPartWith(u, id)) || [])[0]];
+      var txt = drBlank(b.i, drCharNames(id));
+      if (!txt) return null;
+      var right = drName2(u, id);
+      return drMake("Which " + u.name + " character is this?\n“" + txt + "”", right,
+        drShuffle(drOthers(u, us, [id])).slice(0, 14).map(function (x) { return drName2(u, x); }), b.i, id);
+    } },
+    { w: 3, f: function (us) {   // which episode is this moment from?
+      var u = drPick(us), ps = drPassages(u).filter(function (p) { return lbParse(p.key).n !== null; });
+      if (!ps.length) return null;
+      var p = drPick(ps), x = lbParse(p.key), eps = epsFor(x.t) || [];
+      var lab = function (e) { return "Ep " + (e.d || e.n) + (e.t ? " · " + e.t : ""); };
+      var ep = eps.filter(function (e) { return e.n === x.n; })[0];
+      if (!ep || eps.length < 4) return null;
+      var nm = drName2(u, p.id), right = lab(ep);
+      var wr = eps.filter(function (e) { return e.n !== x.n && drEpSeen(x.t, e.n); }).map(lab);
+      if (wr.length < 3) wr = eps.filter(function (e) { return e.n !== x.n; }).map(lab);
+      return drMake("Which episode of " + u.name + " is this from?\n“" + drClip(p.text) + "” (" + nm + ")", right, wr,
+        "It’s from " + drWhere(u, p.key) + ".", p.id);
+    } },
+    { w: 3, f: function (us) {   // what does this character do in this episode or film?
+      var u = drPick(us), ps = drPassages(u);
+      if (ps.length < 4) return null;
+      var p = drPick(ps), nm = drName2(u, p.id);
+      var right = drClip(p.text), rb = drBlank(right, drCharNames(p.id));
+      if (!rb || rb.indexOf("▢") !== -1) return null;
+      var wr = ps.filter(function (q) { return q.id !== p.id && q.key !== p.key; }).map(function (q) {
+        return drBlank(drClip(q.text), drCharNames(q.id));
+      }).filter(function (t) { return t && t.indexOf("▢") === -1; });
+      if (wr.length < 3) return null;
+      return drMake("What does " + nm + " do in " + drWhere(u, p.key) + "?", right, wr, "", p.id);
+    } },
+    { w: 4, f: function (us) {   // who is in this picture?
+      var u = drPick(us), ids = drChars(u).filter(function (id) { return !!drRealImg(id, drPartWith(u, id)); });
+      if (ids.length < 2) return null;
+      var id = drPick(ids), img = drRealImg(id, drPartWith(u, id)), right = drName2(u, id);
+      var wr = drShuffle(drOthers(u, us, [id])).slice(0, 14).map(function (x) { return drName2(u, x); });
+      var q = drMake("Who is this, in " + u.name + "?", right, wr, "That’s " + right + ".", id);
+      if (q) { q.img = img; q.imgOf = id; }
+      return q;
+    } },
+    { w: 2, f: function (us) {   // which of these pictures is …?
+      var u = drPick(us), ids = drChars(u).filter(function (id) { return !!drRealImg(id, drPartWith(u, id)); });
+      if (ids.length < 4) return null;
+      ids = drShuffle(ids);
+      var pics = {}, used = {}, pick = [];
+      ids.forEach(function (x) {
+        var im = drRealImg(x, drPartWith(u, x)), nm = drName2(u, x);
+        if (pick.length < 4 && !used[im] && !pics[nm]) { used[im] = 1; pics[nm] = im; pick.push(x); }
+      });
+      if (pick.length < 4) return null;
+      var right = drName2(u, pick[0]);
+      var q = drMake("Which one is " + right + " in " + u.name + "?", right, pick.slice(1).map(function (x) { return drName2(u, x); }),
+        "That’s " + right + ".", pick[0]);
+      if (q) q.optImg = pics;
+      return q;
+    } },
+    { w: 3, f: function (us) {   // where does this happen?
+      var u = drPick(us), ls = drPlaces(u), inU = {};
+      if (ls.length < 2) return null;
+      u.parts.forEach(function (t) { inU[t] = 1; });
+      var rows = [];
+      ls.forEach(function (l) {
+        var b = LOC_BIOS[l] || {};
+        Object.keys(b).forEach(function (e) {
+          (b[e].p || []).forEach(function (p) {
+            if (inU[lbParse(p[0]).t] && drOk(p[0]) && !(p[3] && p[3].r) && p[2] && p[2].length > 30) rows.push({ l: l, key: p[0], text: p[2] });
+          });
+        });
+      });
+      if (!rows.length) return null;
+      var r = drPick(rows), right = locName(r.l);
+      var txt = drBlank(drClip(r.text), locNames(r.l).concat([right]));
+      if (!txt) return null;
+      var wr = ls.filter(function (l) { return l !== r.l && LOCS[l] && LOCS[l].in !== r.l && LOCS[r.l].in !== l; }).map(locName);
+      if (wr.length < 3) Object.keys(LOCS).forEach(function (l) { if (l !== r.l && (LOCS[l].n[0][0] === "" || objUnlocked(LOCS[l].n[0][0]))) wr.push(locName(l)); });
+      return drMake("Where does this happen, in " + drWhere(u, r.key) + "?\n“" + txt + "”", right, drShuffle(wr).slice(0, 14),
+        "It happens at " + right + ".");
+    } },
+    { w: 2, f: function (us) {   // where is this place?
+      var u = drPick(us), ls = drPlaces(u).filter(function (l) { return LOCS[l] && LOCS[l].in && LOCS[LOCS[l].in]; });
+      if (!ls.length) return null;
+      var l = drPick(ls), par = LOCS[l].in, right = locName(par);
+      var wr = Object.keys(LOCS).filter(function (k) { return k !== par && k !== l && LOCS[k].k === LOCS[par].k; }).map(locName);
+      return drMake("Where is " + locName(l) + "?", right, drShuffle(wr).slice(0, 14), locName(l) + " is in " + right + ".");
+    } },
+    { w: 2, f: function (us) {   // which object is this?
+      var u = drPick(us), os = drObjs(u).filter(function (o) { return OBJS[drBare(o)]; });
+      if (!os.length) return null;
+      var o = drBare(drPick(os)), e = (drEarths(u)[0]), b = (OBJ_BIOS[o] || {})[e] || {};
+      var txt = b.i ? drBlank(drClip(b.i), objNames(o).concat([objName(o)])) : null;
+      if (!txt) return null;
+      var wr = Object.keys(OBJS).filter(function (k) { return k !== o; }).map(objName);
+      return drMake("Which object from " + u.name + " is this?\n“" + txt + "”", objName(o), drShuffle(wr).slice(0, 14), b.i);
+    } },
+    { w: 2, f: function (us) {   // who has held it?
+      var u = drPick(us), os = drObjs(u).map(drBare).filter(function (o) { return OBJS[o] && (OBJS[o].h || []).length; });
+      if (!os.length) return null;
+      var o = drPick(os), held = (OBJS[o].h || []).filter(function (h) { return h[0] === "" || drOk(h[0]); }).map(function (h) { return h[1]; });
+      held = drUniq(held).filter(function (id) { return CHAR_NAMES[id] || CHARS[id]; });
+      if (!held.length) return null;
+      var id = drPick(held), right = drPlain(charName(id));
+      var wr = drOthers(u, us, held).map(function (x) { return drPlain(charName(x)); });
+      return drMake("Which of these has held " + objName(o) + "?", right, drShuffle(wr).slice(0, 14), right + " has held " + objName(o) + ".", id);
+    } },
+    { w: 2, f: function (us) {   // who is in this group?
+      var u = drPick(us), ids = drChars(u).filter(function (id) { return orgsOfChar(id).length; });
+      if (!ids.length) return null;
+      var id = drPick(ids), o = drPick(orgsOfChar(id)), mem = membersOf(o);
+      var wr = drOthers(u, us, mem.concat([id])).map(function (x) { return drName2(u, x); });
+      var right = drName2(u, id);
+      return drMake("Which of these characters has been part of " + orgName(o) + "?", right, drShuffle(wr).slice(0, 14),
+        right + " has been part of " + orgName(o) + ".", id);
+    } },
+    { w: 2, f: function (us) {   // what else has this performer played?
+      var u = drPick(us), rows = drCast(u);
+      if (!rows.length) return null;
+      var r = drPick(rows), other = [];
+      us.forEach(function (u2) {
+        if (u2.key === u.key) return;
+        drCast(u2).forEach(function (x) { if (x.a === r.a && x.id !== r.id) other.push({ x: x, u: u2 }); });
+      });
+      if (!other.length) return null;
+      var o = drPick(other), right = drCharIn(o.x.id, o.x.t, o.x.shown) + " in " + o.u.name;
+      var mine = {};
+      other.forEach(function (y) { mine[y.x.id] = 1; });
+      var wr = [];
+      us.forEach(function (u2) { drCast(u2).forEach(function (x) { if (x.a !== r.a && !mine[x.id] && x.id !== r.id) wr.push(drCharIn(x.id, x.t, x.shown) + " in " + u2.name); }); });
+      return drMake(r.a + " plays " + drCharIn(r.id, r.t, r.shown) + " in " + u.name + ". Which other part have they played?", right,
+        drShuffle(drUniq(wr)).slice(0, 14), r.a + " also plays " + right + ".", o.x.id);
+    } },
+    { w: 2, f: function (us) {   // which universe is this version from?
+      if (DR.earth) return null;
+      var u = drPick(us), ids = drChars(u).filter(function (id) { return Object.keys(BIOS[id] || {}).length > 1; });
+      if (!ids.length) return null;
+      var id = drPick(ids), e = (earthsOf(drPartWith(u, id)) || [])[0];
+      if (!e || e === "multi") return null;
+      var right = earthSlotLabel(e), wr = Object.keys(BIOS[id]).filter(function (x) { return x !== e; }).map(earthSlotLabel);
+      Object.keys(EARTH_INFO).forEach(function (x) { if (x !== e) wr.push(earthSlotLabel(x)); });
+      return drMake("Which universe is the " + drName2(u, id) + " from " + u.name + " from?", right, drShuffle(drUniq(wr)).slice(0, 8),
+        "That version is from " + right + ".", id);
+    } },
+    { w: 2, f: function (us) {   // which of these films or seasons is this character in?
+      var id = drPick(drChars(drPick(us)));
+      if (!id) return null;
+      var mine = us.filter(function (u2) { return drChars(u2).indexOf(id) !== -1; });
+      var not = us.filter(function (u2) { return drChars(u2).indexOf(id) === -1; });
+      if (!mine.length || not.length < 3) return null;
+      var u = drPick(mine), right = u.name, nm = drPlain(charName(id));
+      return drMake("Which of these is " + nm + " in?", right, drShuffle(not).slice(0, 14).map(function (x) { return x.name; }),
+        nm + " is in " + right + ".", id);
+    } }
+  ];
+  DR_KINDS = DR_KINDS.concat(DR_MORE);
   function drNext() {
     var ts = drUnits();
     if (!ts.length) return null;
@@ -9176,6 +9443,13 @@
     }
     return null;
   }
+  window.__drImgFail = function (el) {
+    if (DR.q && DR.q.picked === undefined && (DR.q.img || DR.q.optImg)) {
+      DR.recent.push(DR.q.q);
+      DR.q = drNext();
+      drRender();
+    } else if (el) el.style.visibility = "hidden";
+  };
   function drPanel() {
     var p = document.getElementById("drview");
     if (p) return p;
@@ -9229,17 +9503,23 @@
                                                 : "Mark a few things watched first: questions only come from what you’ve seen.") + "</p>";
     } else {
       if (N) h += '<div class="drcount">Question ' + Math.min(DR.n + (q.picked === undefined ? 1 : 0), N) + " of " + N + "</div>";
-      h += '<div class="drq">' + esc(q.q) + '</div><div class="dropts">';
+      var qq = esc(q.q).replace(/\n/, '</div><div class="drquote">');
+      h += '<div class="drq">' + qq + "</div>";
+      if (q.img) h += '<div class="drpic"><img src="' + esc(q.img) + '" alt="" referrerpolicy="no-referrer" onerror="window.__drImgFail(this)"></div>';
+      h += '<div class="dropts' + (q.optImg ? " drgrid" : "") + '">';
       q.opts.forEach(function (o, i) {
         var cls = "dropt";
         if (q.picked !== undefined) cls += o === q.right ? " right" : (i === q.picked ? " wrong" : " dim");
-        h += '<button class="' + cls + '" data-dropt="' + i + '"' + (q.picked !== undefined ? " disabled" : "") + ">" + esc(o) + "</button>";
+        var inner = esc(o);
+        if (q.optImg) inner = '<img src="' + esc(q.optImg[o]) + '" alt="" referrerpolicy="no-referrer" onerror="window.__drImgFail(this)">'
+                            + (q.picked !== undefined ? '<span class="drcap">' + esc(o) + "</span>" : "");
+        h += '<button class="' + cls + '" data-dropt="' + i + '"' + (q.picked !== undefined ? " disabled" : "") + ">" + inner + "</button>";
       });
       h += "</div>";
       if (q.picked !== undefined) {
         var ok = q.opts[q.picked] === q.right;
         h += '<p class="drwhy ' + (ok ? "ok" : "bad") + '"><b>' + (ok ? drPick(["Nailed it.", "Correct.", "Spot on.", "Yes!"]) : drPick(["Not quite.", "Nope.", "Close, but no."]))
-           + "</b> " + esc(q.why) + "</p>";
+           + "</b> " + esc(q.why || ("The answer: " + q.right)) + "</p>";
         h += '<div class="drnext"><button class="btn" id="drgo">' + (N && DR.n >= N ? "See your score" : "Next question") + "</button>"
            + (q.link ? ' <button class="btn ghost" id="drlink">Open ' + esc(charName(q.link).replace(/\s*\([^)]*continuities\)\s*$/, "")) + "</button>" : "") + "</div>";
       }
@@ -10538,7 +10818,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"tracee","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":1,"actor":"","id":"keanukielbasa","note":""},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/981/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/982/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
