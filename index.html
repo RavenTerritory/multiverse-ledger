@@ -320,13 +320,16 @@
   body > .mlmus { display: none; }      /* parked while the Tiles page is redrawn */
   .mlmusbody { background: var(--panel); border-top: 1px solid var(--edge); padding-bottom: env(safe-area-inset-bottom); }
   .mlmusframe { height: 80px; position: relative; overflow: hidden; }
-  .mlmusslot.pre { position: absolute; left: -9999px; top: 0; width: 360px; height: 80px; }
+  /* Players not on the card wait here: inside the screen, so Chrome runs them at full speed, but invisible and untouchable.
+     The card's own player waits here too while its spot on the card is scrolled out of sight ("away"). */
+  .mlmusslot.pre, .mlmusslot.boot, .mlmusslot.away { position: fixed; left: 0; bottom: 0; width: 360px; height: 203px; opacity: .01; pointer-events: none; z-index: -1; overflow: hidden; }
+  .mlmusslot.pre iframe, .mlmusslot.boot iframe, .mlmusslot.away iframe { width: 100%; height: 100%; pointer-events: none; }
   .mlmus.yt .mlmusframe { height: auto; aspect-ratio: 16 / 9; }
-  .mlmus.yt .mlmusslot:not(.pre), .mlmus.yt .mlmusslot:not(.pre) iframe { width: 100%; height: 100%; }
-  .mlmusslot.pre.ytp { height: 203px; }
+  .mlmus.yt .mlmusslot:not(.pre):not(.boot):not(.away), .mlmus.yt .mlmusslot:not(.pre):not(.boot):not(.away) iframe { width: 100%; height: 100%; }
   .mlmussrc { opacity: .65; font-size: .85em; margin-left: .4em; }
   .mlmusframe iframe { display: block; width: 100%; border: 0; }
-  .mlmus.none .mlmusframe, .mlmus.none .mlmusopts { display: none; }
+  .mlmus.none .mlmusframe { height: 0; aspect-ratio: auto; }   /* not display:none: the waiting players live inside it */
+  .mlmus.none .mlmusopts { display: none; }
   .mlmusbar, .mlmusopts { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12.5px; color: var(--dim); }
   .mlmusopts { padding-top: 0; flex-wrap: wrap; }
   .mlmusbar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -6728,7 +6731,7 @@
       if (a === "acct") { musAccount(); return; }
       if (a === "off") {
         state.prefs.themesOff = !state.prefs.themesOff; save();
-        if (state.prefs.themesOff) musPause(); else { MUS.uri = MUS.uri; musShow(MUS.title, false); }
+        if (state.prefs.themesOff) { musPause(); musQuiet(); } else { MUS.uri = MUS.uri; musShow(MUS.title, false); musPrefetchNow(); }
         musLabel(); return;
       }
       if (a === "edit") { var ed = musEl("mlmusedit"); ed.hidden = !ed.hidden; if (!ed.hidden) { musEl("mlmusin").value = ""; musEl("mlmusin").focus(); } }
@@ -6853,7 +6856,7 @@
     sc.onerror = function () { MUS.ytLoading = false; };
     document.head.appendChild(sc);
   }
-  function musYtCtl(tgt, id, done) {
+  function musYtCtl(tgt, id, st, done) {
     var L = {}, c = {}, pl = null, tm = null, ready = false;
     function emit(n, d) { (L[n] || []).forEach(function (f) { try { f(d); } catch (e) {} }); }
     function upd() {
@@ -6868,8 +6871,14 @@
     c.playFromStart = function () { c.seek(0); c.play(); };
     c.mute = function () { try { pl.mute(); } catch (e) {} };
     c.unMute = function () { try { pl.unMute(); } catch (e) {} };
+    c.isMuted = function () { try { return !!pl.isMuted(); } catch (e) { return false; } };
+    c.setRate = function (r) { try { pl.setPlaybackRate(r); } catch (e) {} };
+    c.rate = function () { try { var r = pl.getPlaybackRate(); return r > 0 ? r : 1; } catch (e) { return 1; } };
+    c.time = function () { try { return pl.getCurrentTime() || 0; } catch (e) { return 0; } };
+    c.state = function () { try { return pl.getPlayerState(); } catch (e) { return -1; } };
     c.destroy = function () { clearInterval(tm); try { pl.destroy(); } catch (e) {} };
     var pv = { playsinline: 1, rel: 0, modestbranding: 1 };
+    if (st >= 1) pv.start = Math.floor(st);       // fetch from the start point, not from 0
     if (/^https?:/.test(location.origin)) pv.origin = location.origin;
     pl = new MUS.yt.Player(tgt, { videoId: id, width: "100%", height: "100%", playerVars: pv, events: {
       onReady: function () { ready = true; emit("ready"); },
@@ -6904,36 +6913,54 @@
     musEl("mlmus").classList.toggle("none", !u || !!state.prefs.themesOff);
   }
   function musPause() { try { if (MUS.ctl) MUS.ctl.pause(); } catch (e) {} }
-  // ---- player pool: key = song + start point. The current card's player is shown; neighbours load off-screen.
+  // ---- player pool. Spotify: one player per song, and its neighbours are only ever loaded, never started (an account
+  // streams in one place at a time, so starting one would cut off the song playing). YouTube: one player per song per
+  // show, so two shows that share a song each have one ready at their own start point. Players not on the card wait in
+  // an invisible layer inside the screen; the next different song each way waits already playing, muted, at quarter
+  // speed and looping around its start point, so swiping to it only has to unmute it.
   MUS.pool = {};
-  function musKey(uri) { return uri; }
-  function musSlot(uri, st) {
-    var key = musKey(uri), p = MUS.pool[key];
-    if (p) return p;
+  var MUS_HOT_W = 0.25, MUS_HOT_RATE = 0.25, MUS_KEEP = 6;
+  // the card's player sits at the bottom of the card; while that spot is off-screen it waits in the invisible layer too
+  function musPlace() {
+    var a = MUS.act; if (!a || !a.el) return;
+    a.el.classList.toggle("away", !MUS.frameVis);
+  }
+  function musWatchFrame() {
+    var fr = document.querySelector("#mlmus .mlmusframe");
+    if (!fr || MUS.frameIO || !window.IntersectionObserver) { if (!window.IntersectionObserver) MUS.frameVis = true; return; }
+    MUS.frameIO = new IntersectionObserver(function (es) { MUS.frameVis = es[es.length - 1].isIntersecting; musPlace(); }, { rootMargin: "120px 0px" });
+    MUS.frameIO.observe(fr);
+  }
+  function musKey(uri, tk) { return isYt(uri) ? uri + "|" + (tk || "") : uri; }
+  function musSlot(uri, st, tk) {
+    var key = musKey(uri, tk), p = MUS.pool[key];
+    if (p) { p.used = Date.now(); return p; }
     var box = document.querySelector("#mlmus .mlmusframe"), yt = isYt(uri);
     if (!box || !(yt ? MUS.yt : MUS.api)) return null;
+    musWatchFrame();
     var el = document.createElement("div"); el.className = "mlmusslot pre" + (yt ? " ytp" : "");
     var tgt = document.createElement("div"); el.appendChild(tgt); box.appendChild(el);
-    p = MUS.pool[key] = { key: key, uri: uri, st: st || 0, c: null, el: el, ready: false, played: false };
+    p = MUS.pool[key] = { key: key, uri: uri, tk: tk || "", st: st || 0, c: null, el: el, ready: false, played: false, made: Date.now(), used: Date.now(), role: null, roleSt: 0, base: yt && st >= 1 ? Math.floor(st) : 0 };
     var o = { uri: uri, width: "100%", height: 80 };   // never startAt / ?t=: Spotify then fights backward scrubbing
-    (yt ? function (tg, oo, cb) { musYtCtl(tg, uri.slice(3), cb); } : MUS.api.createController.bind(MUS.api))(tgt, o, function (c) {
+    (yt ? function (tg, oo, cb) { musYtCtl(tg, uri.slice(3), st || 0, cb); } : MUS.api.createController.bind(MUS.api))(tgt, o, function (c) {
       if (yt) c.addListener("error", function () { if (MUS.pool[key] === p) musYtFail(p); });
       p.c = c;
       if (MUS.act === p) MUS.ctl = c;
-      c.addListener("ready", function () { p.ready = true; if (MUS.act === p && MUS.want) musGo(p); else if (p.primeWant != null) musPrime(p, p.primeWant); });
+      c.addListener("ready", function () { p.ready = true; if (MUS.act === p && MUS.want) musGo(p); else if (p.role) musRole(p, p.role, p.roleSt); });
       c.addListener("playback_started", function () {
         p.started = true;
-        if (MUS.act !== p) {                     // a muted YouTube preload, or a song that started after you swiped away
-          try { c.pause(); } catch (x) {}
-          if (p.priming) { p.priming = false; try { c.seek(p.primeSt || 0); } catch (x) {} setTimeout(function () { if (MUS.act !== p) { try { c.pause(); } catch (x) {} } }, 250); }
-          else p.primeSt = null;
+        if (MUS.act !== p) {
+          if (!yt) { try { c.pause(); } catch (x) {} return; }       // a Spotify song that got going after you swiped away
+          p.booting = false;
+          if (p.role === "hot") { if (!p.hotOn) musRole(p, "hot", p.roleSt); }   // first start: settle it at its start point
+          else { try { c.mute(); c.pause(); } catch (x) {} }
           return;
         }
         MUS.loadingNew = false;
-        if (MUS.seekTo) musSeekNow(c);             // straight to the start point (checked again by the updates below)
+        if (MUS.seekTo) musSeekNow(c);             // Spotify: straight to the start point (checked again by the updates below)
       });
       c.addListener("playback_update", function (e) {
-        if (MUS.act !== p) return;       // a preloaded or old player
+        if (MUS.act !== p) return;       // a waiting or old player
         var d = (e && e.data) || {};      // a pooled player only ever plays its own song, so no old-song reports to skip
         MUS.loadingNew = false;
         MUS.pos = (d.position || 0) / 1000; MUS.dur = (d.duration || 0) / 1000; MUS.paused = !!d.isPaused;
@@ -6947,7 +6974,7 @@
     });
     return p;
   }
-  // seek to the pending start point, at most every 0.6 s and 8 times per start
+  // Spotify: seek to the pending start point, at most every 2 s and 4 times per start
   function musSeekNow(c) {
     var now = Date.now();
     if (MUS.seekTo == null || now - (MUS.seekAt || 0) < 2000) return;   // Spotify keeps reporting the old spot for a moment after a seek
@@ -6957,23 +6984,38 @@
   }
   function musGo(p) {          // start the shown player from the entry's start point
     var c = p.c; if (!c) return;
-    p.st = MUS.want ? (musStart(MUS.title) || 0) : 0;
+    var st = p.st = MUS.want ? (musStart(MUS.title) || 0) : 0;
     MUS.seekN = 0; MUS.seekAt = 0; MUS.playKey = MUS.title ? musThemeKey(MUS.title) : null;
-    var parked = p.started && p.primeSt != null && p.primeSt === p.st;
-    p.priming = false; p.primeSt = null; p.primeWant = null;
-    if (c.unMute) c.unMute();
+    if (!isYt(p.uri)) {
+      if (c.unMute) c.unMute();
+      try {
+        if (!p.started) { p.played = true; MUS.loadingNew = true; musLoadGuard(); MUS.seekTo = st || null; c.play(); }   // never got going: start it fresh
+        else if (st) { MUS.seekTo = st; musSeekNow(c); c.resume(); }
+        else { MUS.seekTo = null; if (c.playFromStart) c.playFromStart(); else { c.seek(0); c.resume(); } }
+      } catch (e) {}
+      return;
+    }
+    var hot = p.started && p.hotOn && Math.abs((p.roleSt || 0) - st) < 0.05;
+    p.role = null; p.hotOn = false; p.booting = false; p.hold = null; p.played = true;
+    MUS.seekTo = null;
     try {
-      if (parked) { MUS.seekTo = p.st || null; MUS.seekAt = Date.now(); c.resume(); }          // preloaded at its start point: instant
-      else if (!p.started) { p.played = true; MUS.loadingNew = true; musLoadGuard(); MUS.seekTo = p.st || null; c.play(); }   // never got going: start it fresh
-      else if (p.st) { MUS.seekTo = p.st; musSeekNow(c); c.resume(); }
-      else { MUS.seekTo = null; if (c.playFromStart) c.playFromStart(); else { c.seek(0); c.resume(); } }
+      if (hot) { c.setRate(1); c.unMute(); }                     // already playing at its start point: it only has to be heard
+      else {                                                      // has to start or seek first: silent until it's at the start point
+        c.mute(); c.setRate(1);
+        p.hold = { st: st, at: Date.now(), until: Date.now() + (p.started ? 5000 : 9000) };
+        p.el.classList.add("boot");
+        if (p.started) c.seek(st); else { MUS.loadingNew = true; musLoadGuard(); }
+        c.play();
+        musTendOn();
+      }
     } catch (e) {}
   }
   function musActivate(uri, st) {
-    var p = musSlot(uri, st);
+    var tk = MUS.title ? musThemeKey(MUS.title) : "";
+    var p = musSlot(uri, st, tk);
     if (!p) return;
-    p.st = st || 0;
-    var same = MUS.title ? musThemeKey(MUS.title) : null;
+    p.st = st || 0; p.used = Date.now();
+    var same = tk || null;
     if (MUS.act === p && same && same === MUS.playKey) {   // another season/part of the same show or film: it plays straight through
       MUS.seekTo = null;
       if (MUS.want && p.ready && MUS.paused !== false) { if (p.started) { try { p.c.resume(); } catch (e) {} } else musGo(p); }
@@ -6984,36 +7026,113 @@
       if (MUS.want && p.ready) musGo(p); else MUS.seekTo = null;
       return;
     }
-    if (MUS.act && MUS.act.c) { try { MUS.act.c.pause(); } catch (e) {} }
-    Object.keys(MUS.pool).forEach(function (k) { MUS.pool[k].el.classList.toggle("pre", MUS.pool[k] !== p); });
-    MUS.act = p; MUS.ctl = p.c; MUS.uri = uri; MUS.pos = -1; MUS.paused = true; MUS.lastSt = st; MUS.playKey = MUS.title ? musThemeKey(MUS.title) : null;
+    var old = MUS.act;
+    if (old && old.c) { try { if (isYt(old.uri)) old.c.mute(); else old.c.pause(); } catch (e) {} old.hold = null; old.hotOn = false; old.booting = false; old.role = null; }
+    Object.keys(MUS.pool).forEach(function (k) { var q = MUS.pool[k]; q.el.classList.toggle("pre", q !== p); if (q !== p) q.el.classList.remove("boot", "away"); });
+    MUS.act = p; MUS.ctl = p.c; MUS.uri = uri; MUS.pos = -1; MUS.paused = true; MUS.lastSt = st; MUS.playKey = same;
+    musPlace();
+    if (old) setTimeout(musPrefetchNow, 0);        // whoever called, the old player is looped or paused straight after
     if (MUS.want && p.ready) musGo(p);           // not ready yet: its "ready" listener starts it
+    else if (isYt(uri) && !p.started) p.el.classList.add("boot");   // meanwhile it loads where Chrome lets it run at full speed
   }
-  // keep the current card's player and the given neighbours; drop the rest
-  function musPrefetch(titles) {
-    if (state.prefs.themesOff) return;
-    var keep = {}; if (MUS.act) keep[MUS.act.key] = 1;
-    var prime = [];
-    (titles || []).forEach(function (t) {
-      var u = t && themeUri(t); if (!u) return;
-      if (!(isYt(u) ? MUS.yt : MUS.api)) return;
-      keep[musKey(u)] = 1; var p = musSlot(u, 0);
-      if (p && p !== MUS.act && isYt(u) && musAuto(t)) prime.push([p, musStart(t) || 0]);
+  // The next different songs from the card at idx: three forward, one back, nearest first. Entries that share the card's
+  // song and show are skipped (it plays straight through them), so a run of episodes doesn't hide what comes after it.
+  function musNeighbours(vis, idx) {
+    var cur = vis[idx] && vis[idx].key, cu = cur && themeUri(cur), ck = cu ? musKey(cu, musThemeKey(cur)) : null;
+    var out = [], seen = {}; if (ck) seen[ck] = 1;
+    [[1, 3], [-1, 1]].forEach(function (d) {
+      for (var j = idx + d[0], n = 0, hops = 0; j >= 0 && j < vis.length && n < d[1] && hops < 60; j += d[0], hops++) {
+        var t = vis[j] && vis[j].key, u = t && themeUri(t); if (!u) continue;
+        var tk = musThemeKey(t), k = musKey(u, tk);
+        if (seen[k]) continue;
+        seen[k] = 1; n++;
+        out.push({ t: t, u: u, k: k, tk: tk, st: musStart(t) || 0, auto: musAuto(t), dist: hops + 1, next: d[0] > 0 && n === 1 });
+      }
     });
-    Object.keys(MUS.pool).forEach(function (k) { if (!keep[k]) musDrop(k); });
-    prime.forEach(function (x) { musPrime(x[0], x[1]); });
+    return out;
   }
-  // YouTube only: load a neighbour muted and park it, paused, at its start point, so swiping to it only has to resume.
-  // Never Spotify: an account streams in one place at a time, so starting a neighbour would cut off the song playing.
-  function musPrime(p, st) {
-    if (!p || !isYt(p.uri) || p === MUS.act) return;
-    if (!p.c || !p.ready) { p.primeWant = st; return; }
-    p.primeWant = null;
-    if (p.started) { if (p.primeSt !== st) { try { p.c.pause(); p.c.seek(st); } catch (e) {} p.primeSt = st; } return; }
-    if (p.priming) { p.primeSt = st; return; }
-    p.priming = true; p.primeSt = st;
-    try { p.c.mute(); p.c.play(); } catch (e) {}
+  function musPrefetchAt(vis, idx) {
+    clearTimeout(MUS.pfT);
+    if (state.prefs.themesOff || !vis || document.hidden) return;
+    var now = Date.now(), want = {}, later = false, a = MUS.act;
+    if (a) want[a.key] = 1;
+    var booting = a && isYt(a.uri) && !a.started && now - (a.made || 0) < 1200;   // let the card's own song start first
+    musNeighbours(vis, idx).forEach(function (x) {
+      var yt = isYt(x.u);
+      if (!(yt ? MUS.yt : MUS.api)) return;
+      if (!yt && x.dist > 1) return;                 // Spotify: only the entries either side, loaded but never started
+      if (!MUS.pool[x.k] && booting && !x.next) { later = true; return; }   // the very next song never waits
+      var p = musSlot(x.u, x.st, x.tk); if (!p) return;
+      want[x.k] = 1; p.used = now;
+      if (yt && x.auto && p !== a) musRole(p, "hot", x.st);
+    });
+    var ks = Object.keys(MUS.pool);
+    ks.forEach(function (k) { var p = MUS.pool[k]; if (!want[k] && p !== a && (p.role || p.hotOn || p.booting || p.started)) musRole(p, null); });
+    var spare = ks.filter(function (k) { return !want[k] && MUS.pool[k] !== a; })
+                  .sort(function (x, y) { return MUS.pool[y].used - MUS.pool[x].used; });
+    spare.slice(Math.max(0, MUS_KEEP - Object.keys(want).length)).forEach(musDrop);
+    if (later) MUS.pfT = setTimeout(musPrefetchNow, 300);
   }
+  function musPrefetchNow() {
+    try {
+      if (!document.getElementById("focus").classList.contains("open")) { musQuiet(); return; }
+      var vis = visibleItems(), i = focusIdx;
+      if (MUS.title && (vis[i] || {}).key !== MUS.title)       // mid-swipe the index lags the card that's playing: use that card
+        for (var d = 1; d <= 3; d++) { if ((vis[i + d] || {}).key === MUS.title) { i += d; break; } if ((vis[i - d] || {}).key === MUS.title) { i -= d; break; } }
+      musPrefetchAt(vis, i);
+    } catch (e) {}
+  }
+  // role "hot": playing, muted, slowed, kept within MUS_HOT_W of st. Anything else: muted and paused.
+  function musRole(p, role, st) {
+    if (!p || p === MUS.act) return;
+    var wasSt = p.roleSt;
+    p.role = role || null; if (role) p.roleSt = st || 0;
+    if (!isYt(p.uri) || !p.c || !p.ready) return;       // Spotify is never started; a loading one calls back when ready
+    var c = p.c;
+    try {
+      if (role !== "hot") { if (p.started || p.booting) { c.mute(); c.pause(); } p.hotOn = false; p.booting = false; return; }
+      c.mute();
+      if (!p.started) { if (!p.booting) { p.booting = true; c.play(); } return; }   // its first "playing" brings it back here
+      var lo = musHotFrom(p), t = c.time();
+      var landing = p.hotOn && wasSt === p.roleSt && Date.now() - (p.hotSeekAt || 0) < 4000 && c.state() === 3;
+      var jump = !landing && (wasSt !== p.roleSt || t < lo - 0.05 || t > p.roleSt + MUS_HOT_W);
+      if (p.hotOn && !jump && (landing || c.state() === 1)) return;     // already waiting where it should
+      if (jump) { c.seek(lo); p.hotSeekAt = Date.now(); }
+      c.setRate(MUS_HOT_RATE); c.play(); p.hotOn = true; musTendOn();
+    } catch (e) {}
+  }
+  // where a waiting player loops back to: a little before its start point, but never before what it has loaded
+  // (it was fetched from its first start point, so jumping earlier than that would mean a fresh download)
+  function musHotFrom(p) { var lo = Math.max(0, p.roleSt - MUS_HOT_W); return Math.max(lo, Math.min(p.base || 0, p.roleSt)); }
+  function musQuiet() { Object.keys(MUS.pool).forEach(function (k) { if (MUS.pool[k] !== MUS.act) musRole(MUS.pool[k], null); }); clearTimeout(MUS.pfT); }
+  // Ten times a second: loop the waiting players back to their start points, and let the card's player be heard
+  // the moment it reaches its start point.
+  function musTendOn() { if (!MUS.tendT) MUS.tendT = setInterval(musTend, 100); }
+  function musTend() {
+    var now = Date.now();
+    Object.keys(MUS.pool).forEach(function (k) {
+      var p = MUS.pool[k], c = p.c;
+      if (!c || !c.time || !p.ready) return;
+      try {
+        if (p === MUS.act) {
+          var h = p.hold; if (!h) return;
+          var s1 = c.state(), t1 = c.time();
+          if (s1 === 1 && c.rate() !== 1) { c.setRate(1); return; }
+          if ((s1 === 1 && Math.abs(t1 - h.st) < 0.4) || now > h.until) { p.hold = null; c.unMute(); p.el.classList.remove("boot"); musPlace(); return; }
+          if (s1 === 1 && now - h.at > 2000) { h.at = now; c.seek(h.st); }   // playing, but not at the start point: one more go
+          return;
+        }
+        if (p.role !== "hot" || !p.hotOn) return;
+        if (!c.isMuted()) c.mute();
+        var s2 = c.state(), t2 = c.time(), lo = musHotFrom(p), since = now - (p.hotSeekAt || 0);
+        if (since < 600 || (s2 === 3 && since < 4000)) return;      // a jump is still landing: never stack another on top of it
+        if (s2 === 2 || s2 === 0 || s2 === 5 || s2 === -1) { c.play(); p.hotSeekAt = now; return; }   // something stopped it
+        if (t2 > p.roleSt + MUS_HOT_W || t2 < lo - 0.05) { c.seek(lo); p.hotSeekAt = now; }
+        if (now - (p.rateAt || 0) > 3000 && c.rate() !== MUS_HOT_RATE) { p.rateAt = now; c.setRate(MUS_HOT_RATE); }
+      } catch (e) {}
+    });
+  }
+  document.addEventListener("visibilitychange", function () { if (document.hidden) musQuiet(); else musPrefetchNow(); });
   function musDrop(k) {
     var p = MUS.pool[k]; if (!p) return;
     try { if (p.c && p.c.destroy) p.c.destroy(); } catch (e) {}
@@ -7040,7 +7159,7 @@
     if (!u || state.prefs.themesOff) { musPause(); return; }
     musPlay(u);
   }
-  function musHide() { MUS.want = false; MUS.seekTo = null; musPause(); var b = musEl("mlmus"); if (b) b.hidden = true; musPad(); }
+  function musHide() { MUS.want = false; MUS.seekTo = null; musPause(); musQuiet(); var b = musEl("mlmus"); if (b) b.hidden = true; musPad(); }
   function hideFocus() { document.getElementById("focus").classList.remove("open"); musHide(); }
   function hideChars() { document.getElementById("charsview").classList.remove("open"); }
   function showChars() { document.getElementById("charsview").classList.add("open"); }
@@ -7791,7 +7910,7 @@
     var w = document.querySelector("#focus .fwrap");
     if (!w) { focusIdx = next; renderFocus(); return; }
     sliding = true;
-    try { var nk = (vis[next] || {}).key; if (nk && nk !== MUS.title) musShow(nk, musAuto(nk)); } catch (e) {}
+    try { var nk = (vis[next] || {}).key; if (nk && nk !== MUS.title) musShow(nk, musAuto(nk)); musPrefetchAt(vis, next); } catch (e) {}
     var out = dir > 0 ? -1 : 1;
     w.style.transition = "transform .16s ease-in, opacity .16s ease-in";
     w.style.transform = "translateX(" + (out * 60) + "%)";
@@ -7823,7 +7942,7 @@
       if (document.getElementById("focus").classList.contains("open") && mk !== MUS.title) musShow(mk, musAuto(mk));
       else if (mk === MUS.title) musLabel();
       if (document.getElementById("focus").classList.contains("open"))
-        setTimeout(function () { musPrefetch([(vis[focusIdx - 1] || {}).key, (vis[focusIdx + 1] || {}).key]); }, 300);
+        setTimeout(musPrefetchNow, 0);
     } catch (e) {}
     if (!vis.length) {
       document.getElementById("fpos").textContent = "";
@@ -11617,7 +11736,7 @@
      the file (the next version number) with them built in. */
   /*ML_USER_EDITS_BEGIN*/var USER_EDITS = {"v":1,"ops":[{"op":"name","id":"sam78","name":"Sam (Swift's enforcer)"},{"op":"rowedit","t":"The Incredible Hulk (1978) \u2014 Season 3","n":7,"id":"sam78","actor":"Jon Cedar","note":"Credited as \"Sam\""},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":8,"id":"croft78"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jimhammond","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jimhammond","actor":"","note":"in a painting"},{"op":"char","id":"allisonhogan","name":"Allison Hogan","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"allisonhogan","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"allisonhogan","actor":"Orla Brady","note":"avatar image"},{"op":"char","id":"edithmarks","name":"Edith Marks","e":"616"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"edithmarks","note":"avatar image"},{"op":"rowedit","t":"VisionQuest","n":3,"id":"edithmarks","actor":"Emily Hampshire","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis","actor":"James D'Arcy","note":"avatar image"},{"op":"add","t":"VisionQuest","n":3,"actor":"","id":"jarvis_ai","note":""},{"op":"rowedit","t":"VisionQuest","n":3,"id":"jarvis_ai","actor":"James D'Arcy","note":"mentioned"},{"op":"char","id":"drjosephinecarrington","name":"Dr. Josephine Carrington","e":"616"},{"op":"add","t":"VisionQuest","n":4,"actor":"","id":"drjosephinecarrington","note":"Mentioned"},{"op":"rowedit","t":"VisionQuest","n":4,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"Mentioned"},{"op":"intro","id":"allisonhogan","e":"616","text":"Allison Hogan is a woman from Tony Stark's life, and the real person he modelled F.R.I.D.A.Y.'s face and voice on."},{"op":"note","id":"allisonhogan","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that Tony built her avatar in Allison Hogan's image, one of several of his AIs modelled on people he knew."},{"op":"intro","id":"edithmarks","e":"616","text":"Edith Marks is a test pilot whose life was marred by tragedy, and the real person behind E.D.I.T.H.'s face and voice."},{"op":"note","id":"edithmarks","e":"616","u":"VisionQuest#3","text":"F.R.I.D.A.Y. reveals that E.D.I.T.H. was modelled on her. It leaves E.D.I.T.H. wondering how much of who she is was ever her own."},{"op":"intro","id":"drjosephinecarrington","e":"616","text":"Dr. Josephine \u201cJo\u201d Carrington was an AI researcher who died of natural causes in 2008."},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#4","text":"She was part of the research team behind the first synthetic consciousness. Years after her death, the colleagues she worked with are being killed one by one by the Butcherbird, a synthezoid built in her image, who claims to be her and says the team betrayed her."},{"op":"note","id":"jarvis","e":"616","u":"VisionQuest#3","text":"Decades later, F.R.I.D.A.Y. reveals that Tony modelled J.A.R.V.I.S. on him, the butler who looked after the Stark family, and gave the AI his face and voice."},{"op":"char","id":"selene78","name":"Selene","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Paulene Myers","role":"Selene","id":"selene78","note":""},{"op":"char","id":"louie78","name":"Louie","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":10,"actor":"Jarrod Johnson","role":"Louie","id":"louie78","note":""},{"op":"intro","id":"selene78","e":"400005","text":"Selene is an elderly woman in Dr. DuBois's New Orleans neighbourhood, and a believer in voodoo."},{"op":"note","id":"selene78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"For all her faith in Babalao, she takes her grandson Louie to Dr. DuBois for the series of injections he needs, against the dangerous disease that seems to have killed his brother. When Babalao orders her to kill the paralysed DuBois in a ritual, she refuses."},{"op":"intro","id":"louie78","e":"400005","text":"Louie is Selene's young grandson."},{"op":"note","id":"louie78","e":"400005","u":"The Incredible Hulk (1978) \u2014 Season 3#10","text":"He has a dangerous disease, apparently the one that killed his brother, and needs a series of injections over a short time. His grandmother brings him to Dr. DuBois for them."},{"op":"name","id":"raymond78","name":"Raymond Harmell"},{"op":"name","id":"gary78","name":"Gary (Slaters Heist)"},{"op":"name","id":"jim78","name":"Jim (Slaters Heist)"},{"op":"char","id":"sarekslater78","name":"Sarek Slater","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":11,"actor":"Mark Lenard","role":"Mr. Slater","id":"sarekslater78","note":"credited as \u201cMr. Slater\u201d"},{"op":"hc","id":"sarekslater78","e":"400005","paras":["Character's first name is a reference to the actor's Star Trek role"]},{"op":"intro","id":"sarekslater78","e":"400005","text":"Sarek Slater owns Slater's, a department store in Philadelphia."},{"op":"untag","t":"The Incredible Hulk (1978) \u2014 Season 3","n":18,"id":"johnnywolff78"},{"op":"char","id":"fats78","name":"Fats (Sam Monte's nephew)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Phil Rubenstein","role":"Fats","id":"fats78","note":""},{"op":"char","id":"rhondawilkes78","name":"Rhonda Wilkes","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 3","n":22,"actor":"Sheila Larken","role":"Rhonda Wilkes","id":"rhondawilkes78","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"bucky","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"erskine","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"kruger","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"redskull","note":""},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":1,"actor":"","id":"antiquelady","note":""},{"op":"name","id":"adamwelsh78","name":"Capt. Adam Welsh"},{"op":"char","id":"drjasonspath78","name":"Dr. Jason Spath","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Arthur Rosenberg","role":"Dr. Jason Spath","id":"drjasonspath78","note":""},{"op":"char","id":"drjohnzeiderman78","name":"Dr. John Zeiderman","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":2,"actor":"Whit Bissell","role":"Dr. John Zeiderman","id":"drjohnzeiderman78","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"tony"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"blackknight"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"enchantress"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"executioner"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"melter"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"thor"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"hank"},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":3,"id":"janet"},{"op":"add","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"actor":"","id":"jarvis","note":""},{"op":"untag","t":"The Marvel Super Heroes (1966) \u2014 Captain America","n":5,"id":"namor"},{"op":"add","t":"VisionQuest","n":6,"actor":"","id":"drjosephinecarrington","note":""},{"op":"rowedit","t":"VisionQuest","n":6,"id":"drjosephinecarrington","actor":"T'Nia Miller","note":"in Jocasta's memories"},{"op":"note","id":"drjosephinecarrington","e":"616","u":"VisionQuest#6","text":"In the memories Jocasta shows Ultron, Jo's father dies of a degenerative brain disease and she turns to neuroscience and AI. Her scanned brain becomes the blueprint for Markridge's first AI and a plan to give everyone a nanobot companion. When she falls ill with the same disease, her colleagues sell the work to Stark Industries, and the nanobots are locked away behind their biometric keys."},{"op":"untag","t":"Fantastic Four (1967 animated series)","n":2,"id":"baronhugo67"},{"op":"char","id":"jean78","name":"Jean (skydiver)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Kelly Harmon","role":"Jean","id":"jean78","note":""},{"op":"char","id":"turner78","name":"Turner (skydiving-show pilot)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":3,"actor":"Michael Swan","role":"Turner","id":"turner78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":2,"actor":"","id":"tracee","note":"","sg":1},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":2,"actor":"","id":"keanukielbasa","note":"","sg":1},{"op":"char","id":"alex78","name":"Alex (La Fronte's associate)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":6,"actor":"Sandy McPeak","role":"Alex","id":"alex78","note":""},{"op":"char","id":"callahan78","name":"Callahan (garage owner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Dick O'Neill","role":"Callahan","id":"callahan78","note":""},{"op":"char","id":"leo78","name":"Leo (Joe Conti's old crew chief)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Lee De Broux","role":"Leo","id":"leo78","note":""},{"op":"char","id":"danny78","name":"Danny (Clyde's partner)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Frank Doubleday","role":"Danny","id":"danny78","note":""},{"op":"char","id":"clyde78","name":"Clyde (mobster)","e":"400005"},{"op":"link","t":"The Incredible Hulk (1978) \u2014 Season 4","n":7,"actor":"Alex Rebar","role":"Clyde","id":"clyde78","note":""},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":7,"actor":"","id":"keanukielbasa","note":"","sg":1},{"op":"add","t":"Spidey and His Amazing Friends \u2014 Season 1","n":8,"actor":"","id":"keanukielbasa","note":"","sg":1}]};/*ML_USER_EDITS_END*/
   /*ML_SHARED_PICS_BEGIN*/var SHARED_PICS = {};/*ML_SHARED_PICS_END*/
-  var LEDGER_VERSION = /*ML_V*/1009/*ML_V_END*/;
+  var LEDGER_VERSION = /*ML_V*/1010/*ML_V_END*/;
   var ML_PENDING_KEY = "mlUserEditsPending1", ML_SAVED_KEY = "mlUserEditsSavedAs1";
   var ML_PENDING = [];
 
